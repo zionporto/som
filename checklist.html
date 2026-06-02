@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Som — Zion Porto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+:root {
+  --bg: #0f0f0f;
+  --bg2: #1a1a1a;
+  --bg3: #242424;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0ede8;
+  --text2: #8a8680;
+  --text3: #55524e;
+  --accent: #c8f060;
+  --accent-dim: rgba(200,240,96,0.12);
+  --accent-dark: #a8cc40;
+  --red: #ff6b6b;
+  --red-dim: rgba(255,107,107,0.12);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg); }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 0 0 80px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* TOPBAR */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.topbar-title { font-size: 15px; font-weight: 500; flex: 1; }
+.topbar-sub { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+.icon-btn {
+  width: 34px; height: 34px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border2); background: var(--bg2);
+  color: var(--text2); cursor: pointer; font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* SCREENS */
+.screen { display: none; padding: 20px; }
+.screen.active { display: block; }
+
+/* CARDS */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.card-flush { padding: 0; overflow: hidden; }
+
+/* LOGO / HEADER */
+.home-header {
+  padding: 32px 0 24px;
+  text-align: center;
+}
+.logo-mark {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(200,240,96,0.2);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px;
+  font-size: 26px; color: var(--accent);
+}
+.home-title { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+.home-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+/* ACTIVE SERVICE CARD */
+.service-card {
+  background: linear-gradient(135deg, #1c2a0e 0%, #1a1a1a 100%);
+  border: 1px solid rgba(200,240,96,0.2);
+}
+.service-name { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+.service-date { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-bottom: 14px; }
+
+/* PROGRESS */
+.prog-track {
+  height: 3px; background: rgba(255,255,255,0.08);
+  border-radius: 99px; overflow: hidden; margin: 6px 0 4px;
+}
+.prog-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.4s; }
+.prog-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); font-family: var(--mono); }
+
+/* BUTTONS */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 13px 16px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border2);
+  background: var(--bg3); color: var(--text);
+  font-size: 14px; font-weight: 500; font-family: var(--font);
+  cursor: pointer; transition: all 0.15s; margin-bottom: 8px;
+}
+.btn:hover { border-color: var(--border2); background: #2d2d2d; }
+.btn:last-child { margin-bottom: 0; }
+.btn-accent { background: var(--accent); color: #0f0f0f; border-color: var(--accent); }
+.btn-accent:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+.btn-danger { border-color: rgba(255,107,107,0.3); color: var(--red); }
+.btn-danger:hover { background: var(--red-dim); }
+.btn i { font-size: 17px; }
+
+/* MEMBER SELECT */
+.member-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.member-item:last-child { border-bottom: none; }
+.member-item:hover { background: var(--bg3); }
+.member-item:active { background: var(--accent-dim); }
+.member-name { font-size: 15px; font-weight: 500; }
+.member-count { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-top: 2px; }
+
+/* AVATAR */
+.av {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; flex-shrink: 0;
+  font-family: var(--mono);
+}
+.av-0 { background: rgba(200,240,96,0.15); color: var(--accent); }
+.av-1 { background: rgba(100,160,255,0.15); color: #64a0ff; }
+.av-2 { background: rgba(255,150,100,0.15); color: #ff9664; }
+.av-3 { background: rgba(200,120,255,0.15); color: #c878ff; }
+
+/* PHASE BUTTONS */
+.phase-btn {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; padding: 16px 18px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text);
+  cursor: pointer; text-align: left; margin-bottom: 8px;
+  transition: all 0.15s; font-family: var(--font);
+}
+.phase-btn:hover { border-color: var(--border2); background: var(--bg3); }
+.phase-icon { font-size: 22px; color: var(--text2); }
+.phase-label { font-size: 14px; font-weight: 500; }
+.phase-sub { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-top: 2px; }
+.phase-pct { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--accent); font-family: var(--mono); }
+.phase-pct.done { color: var(--accent); }
+
+/* CHECKLIST */
+.section-header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text3);
+  padding: 20px 0 8px;
+}
+.section-header i { font-size: 14px; }
+
+.check-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0; cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: opacity 0.2s;
+}
+.check-item:last-child { border-bottom: none; }
+.check-item.done { opacity: 0.45; }
+.checkmark {
+  width: 22px; height: 22px; min-width: 22px;
+  border-radius: 6px; border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 1px; transition: all 0.15s;
+}
+.check-item.done .checkmark {
+  background: var(--accent); border-color: var(--accent);
+}
+.checkmark i { font-size: 13px; color: #0f0f0f; display: none; }
+.check-item.done .checkmark i { display: block; }
+.item-label { font-size: 14px; line-height: 1.4; }
+.check-item.done .item-label { text-decoration: line-through; color: var(--text3); }
+.item-note { font-size: 11px; color: var(--text2); margin-top: 3px; font-family: var(--mono); }
+.item-by {
+  font-size: 10px; color: var(--accent); margin-top: 3px;
+  font-family: var(--mono); display: flex; align-items: center; gap: 4px;
+}
+
+/* LOADING */
+.loading {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 48px 20px; gap: 12px;
+  color: var(--text2); font-size: 13px;
+}
+.spinner {
+  width: 24px; height: 24px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* INPUTS */
+.field { margin-bottom: 14px; }
+.field label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 6px; font-family: var(--mono); letter-spacing: 0.05em; text-transform: uppercase; }
+.field input, .field select {
+  width: 100%; padding: 11px 14px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-size: 14px; font-family: var(--font);
+  transition: border-color 0.15s; outline: none;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); }
+.field input::placeholder { color: var(--text3); }
+.err { font-size: 12px; color: var(--red); margin-top: 6px; display: none; }
+.ok { font-size: 12px; color: var(--accent); margin-top: 6px; display: none; }
+
+/* SUMMARY STATS */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.stat {
+  background: var(--bg3); border-radius: var(--radius-sm);
+  padding: 14px; text-align: center;
+}
+.stat-num { font-size: 26px; font-weight: 600; color: var(--text); font-family: var(--mono); }
+.stat-lbl { font-size: 10px; color: var(--text2); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* HISTORY */
+.hist-item {
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.1s;
+}
+.hist-item:last-child { border-bottom: none; }
+.hist-item:hover { background: var(--bg3); }
+.hist-name { font-size: 14px; font-weight: 500; }
+.hist-meta { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-top: 3px; }
+.hist-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.tag {
+  font-size: 10px; padding: 3px 8px; border-radius: 99px;
+  background: var(--bg3); color: var(--text2);
+  border: 1px solid var(--border); font-family: var(--mono);
+}
+.tag-accent { background: var(--accent-dim); color: var(--accent); border-color: rgba(200,240,96,0.2); }
+
+/* BADGE */
+.badge {
+  font-size: 10px; padding: 3px 8px; border-radius: 99px;
+  font-family: var(--mono); font-weight: 500;
+}
+.badge-live { background: rgba(200,240,96,0.15); color: var(--accent); border: 1px solid rgba(200,240,96,0.25); }
+.badge-done { background: rgba(100,160,255,0.1); color: #64a0ff; border: 1px solid rgba(100,160,255,0.2); }
+
+/* ADMIN */
+.admin-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.admin-row:last-child { border-bottom: none; }
+.admin-row-text { flex: 1; font-size: 13px; }
+.del-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 16px; padding: 4px;
+  transition: color 0.15s;
+}
+.del-btn:hover { color: var(--red); }
+
+/* ADD ROW */
+.add-row { display: flex; gap: 8px; margin-top: 10px; }
+.add-row input {
+  flex: 1; padding: 10px 12px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-size: 13px; font-family: var(--font); outline: none;
+}
+.add-row input:focus { border-color: var(--accent); }
+.add-row button {
+  padding: 10px 14px; background: var(--accent); color: #0f0f0f;
+  border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 16px;
+}
+
+/* DIVIDER */
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+/* EMPTY */
+.empty { text-align: center; padding: 48px 20px; color: var(--text2); }
+.empty i { font-size: 36px; display: block; margin-bottom: 10px; color: var(--text3); }
+.empty p { font-size: 13px; }
+
+/* SYNC DOT */
+.sync-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); display: inline-block; margin-left: 6px;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* PHASE PROGRESS BAR MINI */
+.phase-prog { margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<!-- SCREENS -->
+<div id="s-loading" class="screen active">
+  <div class="loading" style="min-height:100vh">
+    <div class="spinner"></div>
+    <span>A ligar ao servidor...</span>
+  </div>
+</div>
+
+<div id="s-home" class="screen"></div>
+<div id="s-new-culto" class="screen"></div>
+<div id="s-member" class="screen"></div>
+<div id="s-phase" class="screen"></div>
+<div id="s-check" class="screen"></div>
+<div id="s-summary" class="screen"></div>
+<div id="s-history" class="screen"></div>
+<div id="s-admin-login" class="screen"></div>
+<div id="s-admin" class="screen"></div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc,
+  collection, getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAegG6WVtkpERQ9ApLlk3oH3RoGB6tofKM",
+  authDomain: "zion-porto-som.firebaseapp.com",
+  projectId: "zion-porto-som",
+  storageBucket: "zion-porto-som.firebasestorage.app",
+  messagingSenderId: "883129694965",
+  appId: "1:883129694965:web:7428751726f542f033e3bc"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ─── DEFAULT DATA ───────────────────────────────────────────────
+const DEFAULT_MEMBERS = [
+  {id:'m1', name:'Claudio', av:0},
+  {id:'m2', name:'Gabriel', av:1},
+  {id:'m3', name:'Kadu',    av:2},
+  {id:'m4', name:'Mauro',   av:3},
+];
+
+const DEFAULT_CHECKLIST = {
+  montagem: [
+    { sid:'s1', label:'Energia e ligações', icon:'ti-current-ac', items:[
+      {id:'i1', t:'Ligar alimentação principal (mesa → proc. → amps)', n:'Sequência correta'},
+      {id:'i2', t:'Verificar cabos de alimentação e extensões'},
+      {id:'i3', t:'Confirmar aterramento de todos os equipamentos', n:'Evita hum de 50 Hz'},
+    ]},
+    { sid:'s2', label:'Microfones e instrumentos', icon:'ti-microphone', items:[
+      {id:'i4', t:'Testar todos os microfones com fio'},
+      {id:'i5', t:'Verificar pilhas dos microfones sem fio', n:'Substituir se < 50%'},
+      {id:'i6', t:'Testar frequências dos microfones sem fio'},
+      {id:'i7', t:'Ligar e testar DI boxes'},
+      {id:'i8', t:'Verificar cabos de instrumentos e snake'},
+    ]},
+    { sid:'s3', label:'Mesa de som', icon:'ti-sliders', items:[
+      {id:'i9',  t:'Carregar preset do culto'},
+      {id:'i10', t:'Verificar ganhos com os músicos'},
+      {id:'i11', t:'Confirmar routing: canais → bus → PA/monitores'},
+      {id:'i12', t:'Testar gates e compressores', n:'Voz principal e bumbo'},
+    ]},
+    { sid:'s4', label:'PA e monitores', icon:'ti-speakerphone', items:[
+      {id:'i13', t:'Verificar ligações do PA'},
+      {id:'i14', t:'Testar cada monitor com o músico responsável'},
+      {id:'i15', t:'Ajustar mixes de monitores por instrumento'},
+    ]},
+    { sid:'s5', label:'Soundcheck final', icon:'ti-users', items:[
+      {id:'i16', t:'Soundcheck completo com equipa de louvor'},
+      {id:'i17', t:'Verificar feedback no auditório'},
+      {id:'i18', t:'Guardar cena final na mesa', n:'Nome: data + culto'},
+    ]},
+  ],
+  culto: [
+    { sid:'s6', label:'Monitorização', icon:'ti-eye', items:[
+      {id:'i19', t:'Monitorizar níveis de PA'},
+      {id:'i20', t:'Verificar indicadores de clipping'},
+      {id:'i21', t:'Verificar pilhas durante o culto'},
+      {id:'i22', t:'Estar atento a feedback ou ruídos'},
+    ]},
+    { sid:'s7', label:'Ajustes em tempo real', icon:'ti-adjustments-horizontal', items:[
+      {id:'i23', t:'Ajustar mix conforme dinâmica (louvor, pregação)'},
+      {id:'i24', t:'Gerir volume do microfone do pregador'},
+      {id:'i25', t:'Fechar canais desnecessários'},
+    ]},
+    { sid:'s8', label:'Transmissão', icon:'ti-broadcast', items:[
+      {id:'i26', t:'Confirmar gravação a correr'},
+      {id:'i27', t:'Verificar nível de stream'},
+    ]},
+  ],
+  desmontagem: [
+    { sid:'s9', label:'Desligar equipamentos', icon:'ti-power', items:[
+      {id:'i28', t:'Desligar amps e subwoofer primeiro', n:'Inverso da montagem'},
+      {id:'i29', t:'Desligar processadores e mesa'},
+      {id:'i30', t:'Retirar pilhas dos microfones sem fio'},
+    ]},
+    { sid:'s10', label:'Cabos e periféricos', icon:'ti-plug', items:[
+      {id:'i31', t:'Enrolar cabos XLR (técnica over-under)'},
+      {id:'i32', t:'Guardar DI boxes no local correto'},
+      {id:'i33', t:'Desmontar e guardar suportes de microfones'},
+      {id:'i34', t:'Guardar snake enrolado e etiquetado'},
+    ]},
+    { sid:'s11', label:'Verificação final', icon:'ti-clipboard-check', items:[
+      {id:'i35', t:'Percorrer palco e auditório'},
+      {id:'i36', t:'Confirmar que nada ficou para trás'},
+      {id:'i37', t:'Registar problemas ou manutenção necessária'},
+      {id:'i38', t:'Guardar preset e fazer backup', n:'Pen/nuvem se possível'},
+    ]},
+  ],
+};
+
+const PHASES = [
+  {id:'montagem',    label:'Montagem',          icon:'ti-tool'},
+  {id:'culto',       label:'Durante o culto',   icon:'ti-wave-sine'},
+  {id:'desmontagem', label:'Desmontagem',        icon:'ti-package'},
+];
+
+const ADMIN_PASS = '1234';
+
+// ─── STATE ───────────────────────────────────────────────────────
+let cfg = null;        // {members, checklist, adminPass}
+let services = [];     // array of service docs
+let activeService = null;
+let session = { memberId: null, phase: null, serviceId: null };
+let adminAuthed = false;
+let liveUnsub = null;
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function fmtDate(ts) {
+  const d = ts?.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'});
+}
+function fmtTime(ts) {
+  if(!ts) return '';
+  const d = ts?.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+}
+function phaseTotal(phId) {
+  return (cfg.checklist[phId]||[]).reduce((a,s)=>a+s.items.length,0);
+}
+function phaseDone(svc, phId) {
+  return (svc.checks||[]).filter(c=>c.phase===phId).length;
+}
+function totalItems() { return Object.keys(cfg.checklist).reduce((a,ph)=>a+phaseTotal(ph),0); }
+function totalDone(svc) { return (svc.checks||[]).length; }
+function memberById(id) { return cfg.members.find(m=>m.id===id); }
+function itemCheckedBy(svc, itemId) {
+  const c = (svc.checks||[]).find(c=>c.itemId===itemId);
+  return c ? { member: memberById(c.memberId), ts: c.ts } : null;
+}
+
+// ─── FIRESTORE INIT ───────────────────────────────────────────────
+async function initFirestore() {
+  // Config doc
+  const cfgRef = doc(db, 'app', 'config');
+  const cfgSnap = await getDoc(cfgRef);
+  if (!cfgSnap.exists()) {
+    await setDoc(cfgRef, {
+      members: DEFAULT_MEMBERS,
+      checklist: DEFAULT_CHECKLIST,
+      adminPass: ADMIN_PASS,
+    });
+    cfg = { members: DEFAULT_MEMBERS, checklist: DEFAULT_CHECKLIST, adminPass: ADMIN_PASS };
+  } else {
+    cfg = cfgSnap.data();
+  }
+  // Services
+  const svcSnap = await getDocs(collection(db, 'services'));
+  services = svcSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  activeService = services.find(s => s.active) || null;
+  renderHome();
+}
+
+async function saveCfg() {
+  await setDoc(doc(db, 'app', 'config'), cfg);
+}
+
+// ─── LIVE UPDATES ─────────────────────────────────────────────────
+function subscribeService(svcId) {
+  if (liveUnsub) { liveUnsub(); liveUnsub = null; }
+  liveUnsub = onSnapshot(doc(db, 'services', svcId), snap => {
+    if (!snap.exists()) return;
+    const updated = { id: snap.id, ...snap.data() };
+    activeService = updated;
+    const idx = services.findIndex(s => s.id === svcId);
+    if (idx >= 0) services[idx] = updated;
+    else services.push(updated);
+    // Refresh current view if on checklist
+    const active = document.querySelector('.screen.active');
+    if (active && active.id === 's-check') renderChecklist();
+    if (active && active.id === 's-phase') renderPhase();
+  });
+}
+
+// ─── HOME ─────────────────────────────────────────────────────────
+function renderHome() {
+  const svc = activeService;
+  let h = `
+    <div class="topbar">
+      <div style="flex:1">
+        <div class="topbar-title">Zion Porto <span class="sync-dot"></span></div>
+      </div>
+      <button class="icon-btn" onclick="goAdminLogin()" aria-label="Admin"><i class="ti ti-settings"></i></button>
+    </div>
+    <div style="padding:20px">
+    <div class="home-header">
+      <div class="logo-mark"><i class="ti ti-music"></i></div>
+      <div class="home-title">Equipa de Som</div>
+      <div class="home-sub">Zion Porto</div>
+    </div>`;
+
+  if (svc) {
+    const done = totalDone(svc);
+    const tot = totalItems();
+    const pct = Math.round(done/tot*100);
+    const people = [...new Set((svc.checks||[]).map(c=>c.memberId))]
+      .map(id=>memberById(id)).filter(Boolean);
+    h += `
+      <div class="card service-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div class="service-name">${svc.name}</div>
+          <span class="badge badge-live">● em curso</span>
+        </div>
+        <div class="service-date">${fmtDate(svc.createdAt)}</div>
+        <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
+        <div class="prog-label"><span>${done} / ${tot} itens</span><span>${pct}%</span></div>
+        ${people.length ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">${people.map(m=>`<span class="tag tag-accent">${m.name}</span>`).join('')}</div>` : ''}
+      </div>
+      <button class="btn btn-accent" onclick="goMember()"><i class="ti ti-check"></i>Fazer check</button>
+      <button class="btn" onclick="goSummary('${svc.id}')"><i class="ti ti-chart-bar"></i>Ver sumário</button>
+      <button class="btn btn-danger" onclick="closeCulto('${svc.id}')"><i class="ti ti-lock"></i>Fechar culto</button>`;
+  } else {
+    h += `
+      <div class="empty">
+        <i class="ti ti-music-off"></i>
+        <p>Nenhum culto em curso</p>
+      </div>
+      <button class="btn btn-accent" onclick="showNewCulto()"><i class="ti ti-plus"></i>Novo culto</button>`;
+  }
+
+  const closed = services.filter(s=>!s.active);
+  if (closed.length) {
+    h += `<button class="btn" onclick="showHistory()" style="margin-top:8px"><i class="ti ti-history"></i>Histórico (${closed.length})</button>`;
+  }
+
+  h += `</div>`;
+  $('s-home').innerHTML = h;
+  show('s-home');
+}
+
+// ─── NEW CULTO ────────────────────────────────────────────────────
+function showNewCulto() {
+  const hoje = new Date().toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long'});
+  $('s-new-culto').innerHTML = `
+    <div class="topbar">
+      <button class="icon-btn" onclick="renderHome()"><i class="ti ti-arrow-left"></i></button>
+      <div class="topbar-title">Novo culto</div>
+    </div>
+    <div style="padding:20px">
+      <div class="card">
+        <div class="field">
+          <label>Nome do culto</label>
+          <input id="svc-name" placeholder="Ex: Domingo manhã" value="">
+        </div>
+        <div style="font-size:11px;color:var(--text2);font-family:var(--mono)">${hoje}</div>
+        <div id="svc-err" class="err">Preenche o nome do culto.</div>
+      </div>
+      <button class="btn btn-accent" onclick="createCulto()"><i class="ti ti-plus"></i>Criar culto</button>
+    </div>`;
+  show('s-new-culto');
+}
+
+async function createCulto() {
+  const name = $('svc-name').value.trim();
+  if (!name) { $('svc-err').style.display='block'; return; }
+  const id = 'svc_' + Date.now();
+  const svcData = { name, active: true, createdAt: serverTimestamp(), checks: [] };
+  await setDoc(doc(db, 'services', id), svcData);
+  const svc = { id, ...svcData, createdAt: new Date() };
+  services.push(svc);
+  activeService = svc;
+  subscribeService(id);
+  renderHome();
+}
+
+async function closeCulto(id) {
+  await updateDoc(doc(db, 'services', id), { active: false, closedAt: serverTimestamp() });
+  if (activeService?.id === id) activeService = null;
+  const idx = services.findIndex(s=>s.id===id);
+  if (idx>=0) services[idx].active = false;
+  if (liveUnsub) { liveUnsub(); liveUnsub=null; }
+  renderHome();
+}
+
+// ─── MEMBER SELECT ────────────────────────────────────────────────
+function goMember() {
+  if (!activeService) return;
+  session.serviceId = activeService.id;
+  subscribeService(activeService.id);
+  let h = `
+    <div class="topbar">
+      <button class="icon-btn" onclick="renderHome()"><i class="ti ti-arrow-left"></i></button>
+      <div class="topbar-title">Quem és tu?</div>
+    </div>
+    <div class="card card-flush" style="margin:20px">`;
+  cfg.members.forEach(m => {
+    const myChecks = (activeService.checks||[]).filter(c=>c.memberId===m.id).length;
+    h += `<div class="member-item" onclick="selectMember('${m.id}')">
+      <div class="av av-${m.av}">${initials(m.name)}</div>
+      <div>
+        <div class="member-name">${m.name}</div>
+        <div class="member-count">${myChecks} itens feitos</div>
+      </div>
+      <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3);margin-left:auto"></i>
+    </div>`;
+  });
+  h += `</div>`;
+  $('s-member').innerHTML = h;
+  show('s-member');
+}
+
+function selectMember(id) {
+  session.memberId = id;
+  renderPhase();
+}
+
+// ─── PHASE SELECT ─────────────────────────────────────────────────
+function renderPhase() {
+  const svc = activeService;
+  const member = memberById(session.memberId);
+  let h = `
+    <div class="topbar">
+      <button class="icon-btn" onclick="goMember()"><i class="ti ti-arrow-left"></i></button>
+      <div>
+        <div class="topbar-title">${member.name}</div>
+        <div class="topbar-sub">${svc.name}</div>
+      </div>
+    </div>
+    <div style="padding:20px">`;
+  PHASES.forEach(ph => {
+    const done = phaseDone(svc, ph.id);
+    const tot = phaseTotal(ph.id);
+    const pct = Math.round(done/tot*100);
+    h += `<button class="phase-btn" onclick="selectPhase('${ph.id}')">
+      <i class="ti ${ph.icon} phase-icon"></i>
+      <div style="flex:1">
+        <div class="phase-label">${ph.label}</div>
+        <div class="phase-sub">${done} / ${tot} itens</div>
+        <div class="prog-track phase-prog"><div class="prog-fill" style="width:${pct}%"></div></div>
+      </div>
+      <span class="phase-pct">${pct}%</span>
+    </button>`;
+  });
+  h += `</div>`;
+  $('s-phase').innerHTML = h;
+  show('s-phase');
+}
+
+function selectPhase(phId) {
+  session.phase = phId;
+  renderChecklist();
+}
+
+// ─── CHECKLIST ────────────────────────────────────────────────────
+function renderChecklist() {
+  const svc = activeService;
+  const member = memberById(session.memberId);
+  const ph = PHASES.find(p=>p.id===session.phase);
+  const sections = cfg.checklist[session.phase] || [];
+  const done = phaseDone(svc, session.phase);
+  const tot = phaseTotal(session.phase);
+  const pct = Math.round(done/tot*100);
+
+  let h = `
+    <div class="topbar">
+      <button class="icon-btn" onclick="renderPhase()"><i class="ti ti-arrow-left"></i></button>
+      <div style="flex:1">
+        <div class="topbar-title">${ph.label}</div>
+        <div class="topbar-sub">${member.name} · ${svc.name}</div>
+      </div>
+      <span style="font-size:12px;font-family:var(--mono);color:var(--accent);font-weight:600">${pct}%</span>
+    </div>
+    <div style="padding:4px 20px 8px">
+      <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div style="padding:0 20px 20px">`;
+
+  sections.forEach(sec => {
+    h += `<div class="section-header"><i class="ti ${sec.icon}"></i>${sec.label}</div>
+      <div class="card card-flush" style="padding:0 18px">`;
+    sec.items.forEach(item => {
+      const checked = itemCheckedBy(svc, item.id);
+      h += `<div class="check-item${checked?' done':''}" onclick="toggleItem('${item.id}')">
+        <div class="checkmark"><i class="ti ti-check"></i></div>
+        <div>
+          <div class="item-label">${item.t}</div>
+          ${item.n ? `<div class="item-note">${item.n}</div>` : ''}
+          ${checked ? `<div class="item-by"><i class="ti ti-user" style="font-size:10px"></i>${checked.member?.name||'?'} · ${fmtTime(checked.ts)}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    h += `</div>`;
+  });
+
+  h += `</div>`;
+  $('s-check').innerHTML = h;
+  show('s-check');
+}
+
+async function toggleItem(itemId) {
+  const svc = activeService;
+  const ref = doc(db, 'services', svc.id);
+  const existing = (svc.checks||[]).find(c=>c.itemId===itemId);
+  if (existing) {
+    const updated = (svc.checks||[]).filter(c=>c.itemId!==itemId);
+    await updateDoc(ref, { checks: updated });
+    activeService.checks = updated;
+  } else {
+    const entry = { itemId, memberId: session.memberId, phase: session.phase, ts: new Date().toISOString() };
+    await updateDoc(ref, { checks: arrayUnion(entry) });
+    if (!activeService.checks) activeService.checks = [];
+    activeService.checks.push(entry);
+  }
+  renderChecklist();
+}
+
+// ─── SUMMARY ─────────────────────────────────────────────────────
+function goSummary(svcId) {
+  const svc = services.find(s=>s.id===svcId) || activeService;
+  const done = totalDone(svc);
+  const tot = totalItems();
+  const pct = Math.round(done/tot*100);
+
+  const byMember = {};
+  (svc.checks||[]).forEach(c => {
+    byMember[c.memberId] = (byMember[c.memberId]||0) + 1;
+  });
+
+  let h = `
+    <div class="topbar">
+      <button class="icon-btn" onclick="${svc.active ? 'renderHome()' : 'showHistory()}'}"><i class="ti ti-arrow-left"></i></button>
+      <div>
+        <div class="topbar-title">Sumário</div>
+        <div class="topbar-sub">${svc.name}</div>
+      </div>
+      <span class="badge ${svc.active ? 'badge-live' : 'badge-done'}">${svc.active ? '● em curso' : '✓ fechado'}</span>
+    </div>
+    <div style="padding:20px">
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-num">${done}</div><div class="stat-lbl">Itens feitos</div></div>
+        <div class="stat"><div class="stat-num">${pct}%</div><div class="stat-lbl">Concluído</div></div>
+      </div>
+      <div class="card">
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:12px">Participação</div>`;
+
+  cfg.members.forEach(m => {
+    const cnt = byMember[m.id]||0;
+    h += `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div class="av av-${m.av}" style="width:32px;height:32px;font-size:11px">${initials(m.name)}</div>
+      <span style="flex:1;font-size:14px">${m.name}</span>
+      <span style="font-size:13px;font-family:var(--mono);color:${cnt>0?'var(--accent)':'var(--text3)'}">✓ ${cnt}</span>
+    </div>`;
+  });
+  h += `</div>`;
+
+  PHASES.forEach(ph => {
+    const phDone = phaseDone(svc, ph.id);
+    const phTot = phaseTotal(ph.id);
+    h += `<div class="section-header"><i class="ti ${ph.icon}"></i>${ph.label} — ${phDone}/${phTot}</div>
+      <div class="card card-flush" style="padding:0 18px">`;
+    (cfg.checklist[ph.id]||[]).forEach(sec => {
+      sec.items.forEach(item => {
+        const checked = itemCheckedBy(svc, item.id);
+        h += `<div class="check-item${checked?' done':''}">
+          <div class="checkmark"><i class="ti ti-check"></i></div>
+          <div>
+            <div class="item-label">${item.t}</div>
+            ${checked ? `<div class="item-by"><i class="ti ti-user" style="font-size:10px"></i>${checked.member?.name||'?'} · ${fmtTime(checked.ts)}</div>` : ''}
+          </div>
+        </div>`;
+      });
+    });
+    h += `</div>`;
+  });
+
+  h += `</div>`;
+  $('s-summary').innerHTML = h;
+  show('s-summary');
+}
+
+// ─── HISTORY ─────────────────────────────────────────────────────
+function showHistory() {
+  const closed = services.filter(s=>!s.active).sort((a,b)=> {
+    const ta = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+    const tb = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+    return tb - ta;
+  });
+
+  let h = `
+    <div class="topbar">
+      <button class="icon-btn" onclick="renderHome()"><i class="ti ti-arrow-left"></i></button>
+      <div class="topbar-title">Histórico</div>
+    </div>`;
+
+  if (!closed.length) {
+    h += `<div class="empty"><i class="ti ti-history"></i><p>Ainda sem cultos fechados.</p></div>`;
+  } else {
+    h += `<div class="card card-flush" style="margin:20px">`;
+    closed.forEach(svc => {
+      const done = totalDone(svc);
+      const tot = totalItems();
+      const pct = Math.round(done/tot*100);
+      const people = [...new Set((svc.checks||[]).map(c=>c.memberId))].map(id=>memberById(id)).filter(Boolean);
+      h += `<div class="hist-item" onclick="goSummary('${svc.id}')">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="hist-name">${svc.name}</div>
+          <span class="badge badge-done">${pct}%</span>
+        </div>
+        <div class="hist-meta">${fmtDate(svc.createdAt)}</div>
+        <div class="hist-tags">${people.map(m=>`<span class="tag">${m.name}</span>`).join('')}</div>
+      </div>`;
+    });
+    h += `</div>`;
+  }
+  $('s-history').innerHTML = h;
+  show('s-history');
+}
+
+// ─── ADMIN LOGIN ──────────────────────────────────────────────────
+function goAdminLogin() {
+  if (adminAuthed) { renderAdmin(); return; }
+  $('s-admin-login').innerHTML = `
+    <div class="topbar">
+      <button class="icon-btn" onclick="renderHome()"><i class="ti ti-arrow-left"></i></button>
+      <div class="topbar-title">Administração</div>
+    </div>
+    <div style="padding:20px">
+      <div class="card">
+        <div class="field">
+          <label>Password de admin</label>
+          <input type="password" id="adm-pass" placeholder="••••">
+        </div>
+        <div id="adm-err" class="err">Password incorreta.</div>
+      </div>
+      <button class="btn btn-accent" onclick="checkAdminPass()"><i class="ti ti-lock-open"></i>Entrar</button>
+    </div>`;
+  show('s-admin-login');
+}
+
+function checkAdminPass() {
+  const v = $('adm-pass').value;
+  if (v === cfg.adminPass) { adminAuthed = true; renderAdmin(); }
+  else { $('adm-err').style.display='block'; }
+}
+
+// ─── ADMIN ────────────────────────────────────────────────────────
+function renderAdmin() {
+  let h = `
+    <div class="topbar">
+      <button class="icon-btn" onclick="adminAuthed=false;renderHome()"><i class="ti ti-arrow-left"></i></button>
+      <div class="topbar-title">Administração</div>
+    </div>
+    <div style="padding:20px">
+
+    <div class="section-header"><i class="ti ti-users"></i>Membros</div>
+    <div class="card">`;
+
+  cfg.members.forEach(m => {
+    h += `<div class="admin-row">
+      <div class="av av-${m.av}" style="width:28px;height:28px;font-size:10px">${initials(m.name)}</div>
+      <span class="admin-row-text">${m.name}</span>
+      <button class="del-btn" onclick="deleteMember('${m.id}')"><i class="ti ti-trash"></i></button>
+    </div>`;
+  });
+  h += `</div>
+  <div class="add-row">
+    <input id="new-member" placeholder="Adicionar membro">
+    <button onclick="addMember()"><i class="ti ti-plus"></i></button>
+  </div>`;
+
+  PHASES.forEach(ph => {
+    h += `<div class="section-header"><i class="ti ${ph.icon}"></i>${ph.label}</div><div class="card">`;
+    (cfg.checklist[ph.id]||[]).forEach(sec => {
+      sec.items.forEach(item => {
+        h += `<div class="admin-row">
+          <span class="admin-row-text">${item.t}</span>
+          <button class="del-btn" onclick="deleteItem('${ph.id}','${sec.sid}','${item.id}')"><i class="ti ti-trash"></i></button>
+        </div>`;
+      });
+    });
+    h += `</div>
+    <div class="add-row">
+      <input id="new-item-${ph.id}" placeholder="Novo item — ${ph.label}">
+      <button onclick="addItem('${ph.id}')"><i class="ti ti-plus"></i></button>
+    </div>`;
+  });
+
+  h += `
+    <div class="section-header" style="margin-top:8px"><i class="ti ti-lock"></i>Segurança</div>
+    <div class="card">
+      <div class="field"><label>Nova password</label><input type="password" id="new-pass" placeholder="••••"></div>
+      <button class="btn" onclick="changePass()" style="margin-top:4px"><i class="ti ti-check"></i>Atualizar</button>
+      <div id="pass-ok" class="ok">Password atualizada.</div>
+    </div>
+    </div>`;
+
+  $('s-admin').innerHTML = h;
+  show('s-admin');
+}
+
+async function addMember() {
+  const name = $('new-member').value.trim();
+  if (!name) return;
+  const avColors = [0,1,2,3];
+  const av = avColors[cfg.members.length % 4];
+  cfg.members.push({ id:'m_'+Date.now(), name, av });
+  await saveCfg();
+  renderAdmin();
+}
+
+async function deleteMember(id) {
+  cfg.members = cfg.members.filter(m=>m.id!==id);
+  await saveCfg();
+  renderAdmin();
+}
+
+async function addItem(phId) {
+  const el = $('new-item-'+phId);
+  const t = el.value.trim();
+  if (!t) return;
+  cfg.checklist[phId][0].items.push({ id:'i_'+Date.now(), t });
+  await saveCfg();
+  renderAdmin();
+}
+
+async function deleteItem(phId, secId, itemId) {
+  const sec = cfg.checklist[phId].find(s=>s.sid===secId);
+  if (sec) sec.items = sec.items.filter(i=>i.id!==itemId);
+  await saveCfg();
+  renderAdmin();
+}
+
+async function changePass() {
+  const v = $('new-pass').value;
+  if (!v) return;
+  cfg.adminPass = v;
+  await saveCfg();
+  $('pass-ok').style.display='block';
+}
+
+// ─── EXPOSE TO WINDOW ─────────────────────────────────────────────
+Object.assign(window, {
+  renderHome, showNewCulto, createCulto, closeCulto,
+  goMember, selectMember, renderPhase, selectPhase,
+  renderChecklist, toggleItem, goSummary, showHistory,
+  goAdminLogin, checkAdminPass, renderAdmin,
+  addMember, deleteMember, addItem, deleteItem, changePass,
+});
+
+// ─── BOOT ─────────────────────────────────────────────────────────
+initFirestore().catch(err => {
+  $('s-loading').innerHTML = `<div class="loading" style="min-height:100vh">
+    <i class="ti ti-wifi-off" style="font-size:32px;color:var(--red)"></i>
+    <span style="color:var(--text2);font-size:13px">Erro ao ligar ao Firebase.<br>Verifica as credenciais.</span>
+  </div>`;
+});
+</script>
+</body>
+</html>

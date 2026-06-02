@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Som — Zion Porto</title>
+<title>Zion Porto - SOM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
@@ -267,6 +267,8 @@ body {
 .admin-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 0; border-bottom: 1px solid var(--border);
+  transition: background 0.1s; border-radius: 6px;
+  touch-action: none;
 }
 .admin-row:last-child { border-bottom: none; }
 .admin-row-text { flex: 1; font-size: 13px; }
@@ -276,6 +278,41 @@ body {
   transition: color 0.15s;
 }
 .del-btn:hover { color: var(--red); }
+.drag-handle {
+  color: var(--text3); font-size: 18px; padding: 4px 2px;
+  cursor: grab; touch-action: none; flex-shrink: 0;
+}
+.drag-handle:active { cursor: grabbing; }
+.admin-row.dragging {
+  opacity: 0.4; background: var(--bg3);
+}
+.admin-row.drag-over {
+  border-top: 2px solid var(--accent);
+}
+
+/* TYPE SELECTOR */
+.type-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 14px;
+}
+.type-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 8px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border2); background: var(--bg3);
+  color: var(--text2); cursor: pointer; font-size: 13px;
+  font-family: var(--font); transition: all 0.15s;
+}
+.type-btn i { font-size: 20px; }
+.type-btn:hover { border-color: var(--border2); color: var(--text); background: #2d2d2d; }
+.type-btn.active {
+  border-color: var(--accent); color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* DATE/TIME inputs dark fix */
+input[type="date"], input[type="time"] {
+  color-scheme: dark;
+}
 
 /* ADD ROW */
 .add-row { display: flex; gap: 8px; margin-top: 10px; }
@@ -575,8 +612,26 @@ function renderHome() {
 }
 
 // ─── NEW CULTO ────────────────────────────────────────────────────
+const EVENT_TYPES = [
+  { id:'domingo',  label:'Domingo',          icon:'ti-sun' },
+  { id:'vox',      label:'Vox',              icon:'ti-microphone-2' },
+  { id:'raizes',   label:'Raízes',           icon:'ti-plant' },
+  { id:'outro',    label:'Outro',            icon:'ti-dots' },
+];
+
 function showNewCulto() {
-  const hoje = new Date().toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long'});
+  const now = new Date();
+  const dateVal = now.toISOString().slice(0,10);
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const timeVal = `${hh}:${mm}`;
+
+  let typeButtons = EVENT_TYPES.map(t => `
+    <button type="button" class="type-btn" data-id="${t.id}" onclick="selectType('${t.id}')">
+      <i class="ti ${t.icon}"></i>
+      <span>${t.label}</span>
+    </button>`).join('');
+
   $('s-new-culto').innerHTML = `
     <div class="topbar">
       <button class="icon-btn" onclick="renderHome()"><i class="ti ti-arrow-left"></i></button>
@@ -585,22 +640,91 @@ function showNewCulto() {
     <div style="padding:20px">
       <div class="card">
         <div class="field">
-          <label>Nome do culto</label>
-          <input id="svc-name" placeholder="Ex: Domingo manhã" value="">
+          <label>Tipo de evento</label>
+          <div class="type-grid">${typeButtons}</div>
         </div>
-        <div style="font-size:11px;color:var(--text2);font-family:var(--mono)">${hoje}</div>
-        <div id="svc-err" class="err">Preenche o nome do culto.</div>
+        <div id="outro-field" style="display:none">
+          <div class="field">
+            <label>Especifica o tipo</label>
+            <input id="svc-outro" placeholder="Ex: Conferência, Ensaio...">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field" style="margin-bottom:0">
+            <label>Data</label>
+            <input type="date" id="svc-date" value="${dateVal}">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Hora de início</label>
+            <input type="time" id="svc-time" value="${timeVal}">
+          </div>
+        </div>
+        <div id="svc-preview" style="margin-top:14px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm);font-size:13px;color:var(--text2);font-family:var(--mono);min-height:36px"></div>
+        <div id="svc-err" class="err">Escolhe o tipo de evento e a data.</div>
       </div>
       <button class="btn btn-accent" onclick="createCulto()"><i class="ti ti-plus"></i>Criar culto</button>
     </div>`;
   show('s-new-culto');
+  updatePreview();
 }
 
+let selectedType = null;
+
+function selectType(id) {
+  selectedType = id;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+  $('outro-field').style.display = id === 'outro' ? 'block' : 'none';
+  updatePreview();
+}
+
+function updatePreview() {
+  const previewEl = $('svc-preview');
+  if (!previewEl) return;
+  const dateEl = $('svc-date');
+  const timeEl = $('svc-time');
+  if (!dateEl || !timeEl || !selectedType) {
+    previewEl.textContent = 'Escolhe o tipo e a data para ver o nome';
+    return;
+  }
+  const name = buildCultoName();
+  previewEl.innerHTML = `<span style="color:var(--accent)">→</span> ${name}`;
+}
+
+function buildCultoName() {
+  const dateVal = $('svc-date')?.value;
+  const timeVal = $('svc-time')?.value;
+  if (!dateVal || !selectedType) return '';
+  const [y,m,d] = dateVal.split('-');
+  const dateStr = `${d}/${m}/${y}`;
+  const timeStr = timeVal ? timeVal.slice(0,5) : '';
+  let typeLabel = EVENT_TYPES.find(t=>t.id===selectedType)?.label || '';
+  if (selectedType === 'outro') {
+    const custom = $('svc-outro')?.value.trim();
+    typeLabel = custom || 'Outro';
+  }
+  return `${typeLabel} · ${dateStr}${timeStr ? ' · ' + timeStr : ''}`;
+}
+
+// attach live preview listeners after render
+document.addEventListener('input', e => {
+  if (['svc-date','svc-time','svc-outro'].includes(e.target?.id)) updatePreview();
+});
+
 async function createCulto() {
-  const name = $('svc-name').value.trim();
-  if (!name) { $('svc-err').style.display='block'; return; }
+  if (!selectedType) { $('svc-err').style.display='block'; return; }
+  const dateVal = $('svc-date')?.value;
+  if (!dateVal) { $('svc-err').style.display='block'; return; }
+  const name = buildCultoName();
   const id = 'svc_' + Date.now();
-  const svcData = { name, active: true, createdAt: serverTimestamp(), checks: [] };
+  const eventDate = new Date($('svc-date').value + 'T' + ($('svc-time')?.value||'00:00'));
+  const svcData = {
+    name, active: true,
+    createdAt: serverTimestamp(),
+    eventDate: eventDate.toISOString(),
+    eventType: selectedType,
+    checks: []
+  };
+  selectedType = null;
   await setDoc(doc(db, 'services', id), svcData);
   const svc = { id, ...svcData, createdAt: new Date() };
   services.push(svc);
@@ -817,8 +941,8 @@ function goSummary(svcId) {
 // ─── HISTORY ─────────────────────────────────────────────────────
 function showHistory() {
   const closed = services.filter(s=>!s.active).sort((a,b)=> {
-    const ta = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
-    const tb = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+    const ta = a.eventDate ? new Date(a.eventDate) : (a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt));
+    const tb = b.eventDate ? new Date(b.eventDate) : (b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt));
     return tb - ta;
   });
 
@@ -837,12 +961,16 @@ function showHistory() {
       const tot = totalItems();
       const pct = Math.round(done/tot*100);
       const people = [...new Set((svc.checks||[]).map(c=>c.memberId))].map(id=>memberById(id)).filter(Boolean);
+      const evType = EVENT_TYPES.find(t=>t.id===svc.eventType);
       h += `<div class="hist-item" onclick="goSummary('${svc.id}')">
         <div style="display:flex;align-items:center;justify-content:space-between">
-          <div class="hist-name">${svc.name}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${evType ? `<i class="ti ${evType.icon}" style="font-size:15px;color:var(--text2)"></i>` : ''}
+            <div class="hist-name">${svc.name}</div>
+          </div>
           <span class="badge badge-done">${pct}%</span>
         </div>
-        <div class="hist-meta">${fmtDate(svc.createdAt)}</div>
+        <div class="hist-meta">${fmtDate(svc.eventDate || svc.createdAt)}</div>
         <div class="hist-tags">${people.map(m=>`<span class="tag">${m.name}</span>`).join('')}</div>
       </div>`;
     });
@@ -887,17 +1015,18 @@ function renderAdmin() {
       <div class="topbar-title">Administração</div>
     </div>
     <div style="padding:20px">
-
     <div class="section-header"><i class="ti ti-users"></i>Membros</div>
-    <div class="card">`;
+    <div class="card" id="admin-members">`;
 
   cfg.members.forEach(m => {
-    h += `<div class="admin-row">
+    h += `<div class="admin-row" data-id="${m.id}" data-type="member">
+      <i class="ti ti-grip-vertical drag-handle" aria-hidden="true"></i>
       <div class="av av-${m.av}" style="width:28px;height:28px;font-size:10px">${initials(m.name)}</div>
       <span class="admin-row-text">${m.name}</span>
-      <button class="del-btn" onclick="deleteMember('${m.id}')"><i class="ti ti-trash"></i></button>
+      <button class="del-btn" onclick="deleteMember('${m.id}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
     </div>`;
   });
+
   h += `</div>
   <div class="add-row">
     <input id="new-member" placeholder="Adicionar membro">
@@ -905,12 +1034,14 @@ function renderAdmin() {
   </div>`;
 
   PHASES.forEach(ph => {
-    h += `<div class="section-header"><i class="ti ${ph.icon}"></i>${ph.label}</div><div class="card">`;
+    h += `<div class="section-header"><i class="ti ${ph.icon}"></i>${ph.label}</div>
+    <div class="card" id="admin-items-${ph.id}">`;
     (cfg.checklist[ph.id]||[]).forEach(sec => {
       sec.items.forEach(item => {
-        h += `<div class="admin-row">
+        h += `<div class="admin-row" data-id="${item.id}" data-phase="${ph.id}" data-sec="${sec.sid}" data-type="item">
+          <i class="ti ti-grip-vertical drag-handle" aria-hidden="true"></i>
           <span class="admin-row-text">${item.t}</span>
-          <button class="del-btn" onclick="deleteItem('${ph.id}','${sec.sid}','${item.id}')"><i class="ti ti-trash"></i></button>
+          <button class="del-btn" onclick="deleteItem('${ph.id}','${sec.sid}','${item.id}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
         </div>`;
       });
     });
@@ -932,13 +1063,90 @@ function renderAdmin() {
 
   $('s-admin').innerHTML = h;
   show('s-admin');
+  initDrag();
+}
+
+// ─── DRAG AND DROP ────────────────────────────────────────────────
+function initDrag() {
+  let dragEl = null, dragType = null, dragPhase = null;
+  let startY = 0, startIdx = 0;
+
+  function getRows(type, phase) {
+    if (type === 'member') return [...document.querySelectorAll('#admin-members .admin-row')];
+    return [...document.querySelectorAll(`#admin-items-${phase} .admin-row`)];
+  }
+
+  function onDragStart(e, el) {
+    dragEl = el;
+    dragType = el.dataset.type;
+    dragPhase = el.dataset.phase || null;
+    startY = (e.touches ? e.touches[0].clientY : e.clientY);
+    startIdx = getRows(dragType, dragPhase).indexOf(el);
+    el.classList.add('dragging');
+    e.dataTransfer && (e.dataTransfer.effectAllowed = 'move');
+  }
+
+  function onDragOver(e, el) {
+    if (!dragEl || el === dragEl) return;
+    if (el.dataset.type !== dragType) return;
+    if (dragType === 'item' && el.dataset.phase !== dragPhase) return;
+    e.preventDefault && e.preventDefault();
+    const rows = getRows(dragType, dragPhase);
+    const fromIdx = rows.indexOf(dragEl);
+    const toIdx = rows.indexOf(el);
+    if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+    const parent = el.parentNode;
+    if (fromIdx < toIdx) parent.insertBefore(dragEl, el.nextSibling);
+    else parent.insertBefore(dragEl, el);
+  }
+
+  async function onDragEnd() {
+    if (!dragEl) return;
+    dragEl.classList.remove('dragging');
+    document.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+    const rows = getRows(dragType, dragPhase);
+    const newOrder = rows.map(r => r.dataset.id);
+    if (dragType === 'member') {
+      cfg.members = newOrder.map(id => cfg.members.find(m => m.id === id)).filter(Boolean);
+    } else {
+      const sec = cfg.checklist[dragPhase].find(s => s.sid === rows[0]?.dataset.sec);
+      if (sec) sec.items = newOrder.map(id => sec.items.find(i => i.id === id)).filter(Boolean);
+    }
+    await saveCfg();
+    dragEl = null;
+  }
+
+  document.querySelectorAll('.admin-row').forEach(row => {
+    const handle = row.querySelector('.drag-handle');
+    if (!handle) return;
+
+    // Desktop drag
+    row.setAttribute('draggable', 'true');
+    row.addEventListener('dragstart', e => onDragStart(e, row));
+    row.addEventListener('dragover', e => onDragOver(e, row));
+    row.addEventListener('dragend', onDragEnd);
+
+    // Mobile touch
+    handle.addEventListener('touchstart', e => {
+      onDragStart(e, row);
+    }, { passive: true });
+
+    handle.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetRow = target?.closest('.admin-row');
+      if (targetRow) onDragOver(e, targetRow);
+    }, { passive: false });
+
+    handle.addEventListener('touchend', onDragEnd);
+  });
 }
 
 async function addMember() {
   const name = $('new-member').value.trim();
   if (!name) return;
-  const avColors = [0,1,2,3];
-  const av = avColors[cfg.members.length % 4];
+  const av = cfg.members.length % 4;
   cfg.members.push({ id:'m_'+Date.now(), name, av });
   await saveCfg();
   renderAdmin();

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Zion Porto - SOM</title>
+<title>Zion Porto - Som</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
@@ -301,9 +301,13 @@ body {
   border: 1px solid var(--border2); background: var(--bg3);
   color: var(--text2); cursor: pointer; font-size: 13px;
   font-family: var(--font); transition: all 0.15s;
+  -webkit-appearance: none; appearance: none;
+  user-select: none; -webkit-tap-highlight-color: transparent;
 }
-.type-btn i { font-size: 20px; }
+.type-btn i { font-size: 20px; pointer-events: none; }
+.type-btn span { pointer-events: none; }
 .type-btn:hover { border-color: var(--border2); color: var(--text); background: #2d2d2d; }
+.type-btn:active { transform: scale(0.97); }
 .type-btn.active {
   border-color: var(--accent); color: var(--accent);
   background: var(--accent-dim);
@@ -372,7 +376,7 @@ input[type="date"], input[type="time"] {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, doc, getDoc, setDoc, updateDoc,
+  getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -888,7 +892,7 @@ function goSummary(svcId) {
 
   let h = `
     <div class="topbar">
-      <button class="icon-btn" onclick="${svc.active ? 'renderHome()' : 'showHistory()}'}"><i class="ti ti-arrow-left"></i></button>
+      <button class="icon-btn" onclick="${svc.active ? 'renderHome()' : 'showHistory()'}"><i class="ti ti-arrow-left"></i></button>
       <div>
         <div class="topbar-title">Sumário</div>
         <div class="topbar-sub">${svc.name}</div>
@@ -962,16 +966,19 @@ function showHistory() {
       const pct = Math.round(done/tot*100);
       const people = [...new Set((svc.checks||[]).map(c=>c.memberId))].map(id=>memberById(id)).filter(Boolean);
       const evType = EVENT_TYPES.find(t=>t.id===svc.eventType);
-      h += `<div class="hist-item" onclick="goSummary('${svc.id}')">
-        <div style="display:flex;align-items:center;justify-content:space-between">
+      h += `<div class="hist-item">
+        <div style="display:flex;align-items:center;justify-content:space-between" onclick="goSummary('${svc.id}')">
           <div style="display:flex;align-items:center;gap:8px">
             ${evType ? `<i class="ti ${evType.icon}" style="font-size:15px;color:var(--text2)"></i>` : ''}
             <div class="hist-name">${svc.name}</div>
           </div>
-          <span class="badge badge-done">${pct}%</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="badge badge-done">${pct}%</span>
+            ${adminAuthed ? `<button class="del-btn" onclick="event.stopPropagation();deleteService('${svc.id}')" aria-label="Apagar"><i class="ti ti-trash"></i></button>` : ''}
+          </div>
         </div>
-        <div class="hist-meta">${fmtDate(svc.eventDate || svc.createdAt)}</div>
-        <div class="hist-tags">${people.map(m=>`<span class="tag">${m.name}</span>`).join('')}</div>
+        <div class="hist-meta" onclick="goSummary('${svc.id}')">${fmtDate(svc.eventDate || svc.createdAt)}</div>
+        <div class="hist-tags" onclick="goSummary('${svc.id}')">${people.map(m=>`<span class="tag">${m.name}</span>`).join('')}</div>
       </div>`;
     });
     h += `</div>`;
@@ -1182,6 +1189,13 @@ async function changePass() {
   $('pass-ok').style.display='block';
 }
 
+async function deleteService(id) {
+  if (!confirm('Apagar este culto permanentemente?')) return;
+  await deleteDoc(doc(db, 'services', id));
+  services = services.filter(s => s.id !== id);
+  showHistory();
+}
+
 // ─── EXPOSE TO WINDOW ─────────────────────────────────────────────
 Object.assign(window, {
   renderHome, showNewCulto, createCulto, closeCulto,
@@ -1189,6 +1203,7 @@ Object.assign(window, {
   renderChecklist, toggleItem, goSummary, showHistory,
   goAdminLogin, checkAdminPass, renderAdmin,
   addMember, deleteMember, addItem, deleteItem, changePass,
+  selectType, updatePreview, deleteService,
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────

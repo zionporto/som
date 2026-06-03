@@ -586,7 +586,9 @@ function subscribeService(svcId) {
 
 // ─── HOME ─────────────────────────────────────────────────────────
 function renderHome() {
-  const svc = activeService;
+  const activeServices = services.filter(s => s.active);
+  const closed = services.filter(s => !s.active);
+
   let h = `
     <div class="topbar">
       <div style="flex:1">
@@ -604,36 +606,40 @@ function renderHome() {
       <div class="home-sub">${currentUser?.displayName || currentUser?.email || 'Zion Porto'}</div>
     </div>`;
 
-  if (svc) {
-    const done = totalDone(svc);
-    const tot = totalItems();
-    const pct = Math.round(done/tot*100);
-    const people = [...new Set((svc.checks||[]).map(c=>c.memberId))]
-      .map(id=>memberById(id)).filter(Boolean);
-    h += `
-      <div class="card service-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-          <div class="service-name">${svc.name}</div>
-          <span class="badge badge-live">● em curso</span>
-        </div>
-        <div class="service-date">${fmtDate(svc.createdAt)}</div>
-        <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
-        <div class="prog-label"><span>${done} / ${tot} itens</span><span>${pct}%</span></div>
-        ${people.length ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">${people.map(m=>`<span class="tag tag-accent">${m.name}</span>`).join('')}</div>` : ''}
-      </div>
-      <button class="btn btn-accent" onclick="goMember()"><i class="ti ti-check"></i>Fazer check</button>
-      <button class="btn" onclick="goSummary('${svc.id}')"><i class="ti ti-chart-bar"></i>Ver sumário</button>
-      <button class="btn btn-danger" onclick="closeCulto('${svc.id}')"><i class="ti ti-lock"></i>Fechar culto</button>`;
-  } else {
+  if (activeServices.length === 0) {
     h += `
       <div class="empty">
         <i class="ti ti-music-off"></i>
         <p>Nenhum culto em curso</p>
-      </div>
-      <button class="btn btn-accent" onclick="showNewCulto()"><i class="ti ti-plus"></i>Novo culto</button>`;
+      </div>`;
+  } else {
+    activeServices.forEach(svc => {
+      const done = totalDone(svc);
+      const tot = totalItems();
+      const pct = Math.round(done/tot*100);
+      const people = [...new Set((svc.checks||[]).map(c=>c.memberId))]
+        .map(id=>memberById(id)).filter(Boolean);
+      h += `
+        <div class="card service-card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div class="service-name">${svc.name}</div>
+            <span class="badge badge-live">● em curso</span>
+          </div>
+          <div class="service-date">${fmtDate(svc.createdAt)}</div>
+          <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
+          <div class="prog-label"><span>${done} / ${tot} itens</span><span>${pct}%</span></div>
+          ${people.length ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">${people.map(m=>`<span class="tag tag-accent">${m.name}</span>`).join('')}</div>` : ''}
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-accent" style="flex:2;margin-bottom:0" onclick="startCheck('${svc.id}')"><i class="ti ti-check"></i>Check</button>
+            <button class="btn" style="flex:1;margin-bottom:0" onclick="goSummary('${svc.id}')"><i class="ti ti-chart-bar"></i></button>
+            <button class="btn btn-danger" style="flex:1;margin-bottom:0" onclick="closeCulto('${svc.id}')"><i class="ti ti-lock"></i></button>
+          </div>
+        </div>`;
+    });
   }
 
-  const closed = services.filter(s=>!s.active);
+  h += `<button class="btn btn-accent" onclick="showNewCulto()" style="margin-top:4px"><i class="ti ti-plus"></i>Novo culto</button>`;
+
   if (closed.length) {
     h += `<button class="btn" onclick="showHistory()" style="margin-top:8px"><i class="ti ti-history"></i>Histórico (${closed.length})</button>`;
   }
@@ -767,20 +773,24 @@ async function createCulto() {
 
 async function closeCulto(id) {
   await updateDoc(doc(db, 'services', id), { active: false, closedAt: serverTimestamp() });
-  if (activeService?.id === id) activeService = null;
-  const idx = services.findIndex(s=>s.id===id);
-  if (idx>=0) services[idx].active = false;
-  if (liveUnsub) { liveUnsub(); liveUnsub=null; }
+  const idx = services.findIndex(s => s.id === id);
+  if (idx >= 0) services[idx].active = false;
+  if (activeService?.id === id) activeService = services.find(s => s.active) || null;
+  if (liveUnsub && !services.some(s => s.active)) { liveUnsub(); liveUnsub = null; }
   renderHome();
 }
 
 // ─── MEMBER SELECT ────────────────────────────────────────────────
+function startCheck(svcId) {
+  activeService = services.find(s => s.id === svcId);
+  goMember();
+}
+
 function goMember() {
   if (!activeService) return;
   session.serviceId = activeService.id;
   subscribeService(activeService.id);
 
-  // Auto-select if user matches a member
   if (session.memberId) {
     session.autoMatched = true;
     renderPhase();
@@ -1337,7 +1347,7 @@ async function deleteService(id) {
 // ─── EXPOSE TO WINDOW ─────────────────────────────────────────────
 Object.assign(window, {
   renderHome, showNewCulto, createCulto, closeCulto,
-  goMember, goMemberBack, selectMember, renderPhase, selectPhase,
+  startCheck, goMember, goMemberBack, selectMember, renderPhase, selectPhase,
   renderChecklist, toggleItem, goSummary, showHistory,
   goAdminLogin, checkAdminPass, renderAdmin,
   addMember, deleteMember, addItem, deleteItem, changePass,

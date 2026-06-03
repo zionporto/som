@@ -460,7 +460,7 @@ import {
   collection, getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithRedirect, signOut, onAuthStateChanged, getRedirectResult
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged, getRedirectResult
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -1540,8 +1540,13 @@ function renderDenied(email) {
 }
 
 async function loginWithGoogle() {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   try {
-    await signInWithRedirect(auth, googleProvider);
+    if (isMobile) {
+      await signInWithRedirect(auth, googleProvider);
+    } else {
+      await signInWithPopup(auth, googleProvider);
+    }
   } catch(e) {
     const el = $('login-err');
     if (el) { el.style.display='block'; el.textContent = 'Erro ao autenticar. Tenta novamente.'; }
@@ -1555,31 +1560,18 @@ async function logOut() {
 }
 
 // ─── BOOT ─────────────────────────────────────────────────────────
-onAuthStateChanged(auth, async user => {
-  if (!user) {
-    // Check if we're returning from a redirect
-    try {
-      const result = await getRedirectResult(auth);
-      if (!result) renderLogin();
-    } catch(e) {
-      renderLogin();
-    }
-    return;
-  }
+async function handleAuth(user) {
+  if (!user) { renderLogin(); return; }
   currentUser = user;
-
   try {
     const cfgRef = doc(db, 'app', 'config');
     const cfgSnap = await getDoc(cfgRef);
-    // Check access: use member emails as the allowed list
     const memberEmails = (cfgSnap.exists() ? (cfgSnap.data().members || []) : [])
       .map(m => m.email?.toLowerCase()).filter(Boolean);
-
     if (memberEmails.length > 0 && !memberEmails.includes(user.email.toLowerCase())) {
       renderDenied(user.email);
       return;
     }
-
     await initApp();
   } catch(e) {
     $('s-loading').innerHTML = `<div class="loading" style="min-height:100vh">
@@ -1587,6 +1579,13 @@ onAuthStateChanged(auth, async user => {
       <span style="color:var(--text2);font-size:13px">Erro ao ligar ao Firebase.</span>
     </div>`;
   }
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────
+// Wait for redirect result before subscribing to auth state
+// This prevents the loop on mobile where onAuthStateChanged fires null during redirect
+getRedirectResult(auth).catch(() => {}).finally(() => {
+  onAuthStateChanged(auth, user => handleAuth(user));
 });
 </script>
 </body>

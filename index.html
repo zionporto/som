@@ -409,7 +409,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// ─── DEFAULT DATA ───────────────────────────────────────────────
+// ─── DEFAULT DATA (flat structure) ──────────────────────────────
 const DEFAULT_MEMBERS = [
   {id:'m1', name:'Claudio', av:0},
   {id:'m2', name:'Gabriel', av:1},
@@ -419,72 +419,66 @@ const DEFAULT_MEMBERS = [
 
 const DEFAULT_CHECKLIST = {
   montagem: [
-    { sid:'s1', label:'Energia e ligações', icon:'ti-current-ac', items:[
-      {id:'i1', t:'Ligar alimentação principal (mesa → proc. → amps)', n:'Sequência correta'},
-      {id:'i2', t:'Verificar cabos de alimentação e extensões'},
-      {id:'i3', t:'Confirmar aterramento de todos os equipamentos', n:'Evita hum de 50 Hz'},
-    ]},
-    { sid:'s2', label:'Microfones e instrumentos', icon:'ti-microphone', items:[
-      {id:'i4', t:'Testar todos os microfones com fio'},
-      {id:'i5', t:'Verificar pilhas dos microfones sem fio', n:'Substituir se < 50%'},
-      {id:'i6', t:'Testar frequências dos microfones sem fio'},
-      {id:'i7', t:'Ligar e testar DI boxes'},
-      {id:'i8', t:'Verificar cabos de instrumentos e snake'},
-    ]},
-    { sid:'s3', label:'Mesa de som', icon:'ti-sliders', items:[
-      {id:'i9',  t:'Carregar preset do culto'},
-      {id:'i10', t:'Verificar ganhos com os músicos'},
-      {id:'i11', t:'Confirmar routing: canais → bus → PA/monitores'},
-      {id:'i12', t:'Testar gates e compressores', n:'Voz principal e bumbo'},
-    ]},
-    { sid:'s4', label:'PA e monitores', icon:'ti-speakerphone', items:[
-      {id:'i13', t:'Verificar ligações do PA'},
-      {id:'i14', t:'Testar cada monitor com o músico responsável'},
-      {id:'i15', t:'Ajustar mixes de monitores por instrumento'},
-    ]},
-    { sid:'s5', label:'Soundcheck final', icon:'ti-users', items:[
-      {id:'i16', t:'Soundcheck completo com equipa de louvor'},
-      {id:'i17', t:'Verificar feedback no auditório'},
-      {id:'i18', t:'Guardar cena final na mesa', n:'Nome: data + culto'},
-    ]},
+    {id:'i1',  t:'Ligar alimentação principal (mesa → proc. → amps)', n:'Sequência correta'},
+    {id:'i2',  t:'Verificar cabos de alimentação e extensões'},
+    {id:'i3',  t:'Confirmar aterramento de todos os equipamentos', n:'Evita hum de 50 Hz'},
+    {id:'i4',  t:'Testar todos os microfones com fio'},
+    {id:'i5',  t:'Verificar pilhas dos microfones sem fio', n:'Substituir se < 50%'},
+    {id:'i6',  t:'Testar frequências dos microfones sem fio'},
+    {id:'i7',  t:'Ligar e testar DI boxes'},
+    {id:'i8',  t:'Verificar cabos de instrumentos e snake'},
+    {id:'i9',  t:'Carregar preset do culto'},
+    {id:'i10', t:'Verificar ganhos com os músicos'},
+    {id:'i11', t:'Confirmar routing: canais → bus → PA/monitores'},
+    {id:'i12', t:'Testar gates e compressores', n:'Voz principal e bumbo'},
+    {id:'i13', t:'Verificar ligações do PA'},
+    {id:'i14', t:'Testar cada monitor com o músico responsável'},
+    {id:'i15', t:'Ajustar mixes de monitores por instrumento'},
+    {id:'i16', t:'Soundcheck completo com equipa de louvor'},
+    {id:'i17', t:'Verificar feedback no auditório'},
+    {id:'i18', t:'Guardar cena final na mesa', n:'Nome: data + culto'},
   ],
   culto: [
-    { sid:'s6', label:'Monitorização', icon:'ti-eye', items:[
-      {id:'i19', t:'Monitorizar níveis de PA'},
-      {id:'i20', t:'Verificar indicadores de clipping'},
-      {id:'i21', t:'Verificar pilhas durante o culto'},
-      {id:'i22', t:'Estar atento a feedback ou ruídos'},
-    ]},
-    { sid:'s7', label:'Ajustes em tempo real', icon:'ti-adjustments-horizontal', items:[
-      {id:'i23', t:'Ajustar mix conforme dinâmica (louvor, pregação)'},
-      {id:'i24', t:'Gerir volume do microfone do pregador'},
-      {id:'i25', t:'Fechar canais desnecessários'},
-    ]},
-    { sid:'s8', label:'Transmissão', icon:'ti-broadcast', items:[
-      {id:'i26', t:'Confirmar gravação a correr'},
-      {id:'i27', t:'Verificar nível de stream'},
-    ]},
+    {id:'i19', t:'Monitorizar níveis de PA'},
+    {id:'i20', t:'Verificar indicadores de clipping'},
+    {id:'i21', t:'Verificar pilhas durante o culto'},
+    {id:'i22', t:'Estar atento a feedback ou ruídos'},
+    {id:'i23', t:'Ajustar mix conforme dinâmica (louvor, pregação)'},
+    {id:'i24', t:'Gerir volume do microfone do pregador'},
+    {id:'i25', t:'Fechar canais desnecessários'},
+    {id:'i26', t:'Confirmar gravação a correr'},
+    {id:'i27', t:'Verificar nível de stream'},
   ],
   desmontagem: [
-    { sid:'s9', label:'Desligar equipamentos', icon:'ti-power', items:[
-      {id:'i28', t:'Desligar amps e subwoofer primeiro', n:'Inverso da montagem'},
-      {id:'i29', t:'Desligar processadores e mesa'},
-      {id:'i30', t:'Retirar pilhas dos microfones sem fio'},
-    ]},
-    { sid:'s10', label:'Cabos e periféricos', icon:'ti-plug', items:[
-      {id:'i31', t:'Enrolar cabos XLR (técnica over-under)'},
-      {id:'i32', t:'Guardar DI boxes no local correto'},
-      {id:'i33', t:'Desmontar e guardar suportes de microfones'},
-      {id:'i34', t:'Guardar snake enrolado e etiquetado'},
-    ]},
-    { sid:'s11', label:'Verificação final', icon:'ti-clipboard-check', items:[
-      {id:'i35', t:'Percorrer palco e auditório'},
-      {id:'i36', t:'Confirmar que nada ficou para trás'},
-      {id:'i37', t:'Registar problemas ou manutenção necessária'},
-      {id:'i38', t:'Guardar preset e fazer backup', n:'Pen/nuvem se possível'},
-    ]},
+    {id:'i28', t:'Desligar amps e subwoofer primeiro', n:'Inverso da montagem'},
+    {id:'i29', t:'Desligar processadores e mesa'},
+    {id:'i30', t:'Retirar pilhas dos microfones sem fio'},
+    {id:'i31', t:'Enrolar cabos XLR (técnica over-under)'},
+    {id:'i32', t:'Guardar DI boxes no local correto'},
+    {id:'i33', t:'Desmontar e guardar suportes de microfones'},
+    {id:'i34', t:'Guardar snake enrolado e etiquetado'},
+    {id:'i35', t:'Percorrer palco e auditório'},
+    {id:'i36', t:'Confirmar que nada ficou para trás'},
+    {id:'i37', t:'Registar problemas ou manutenção necessária'},
+    {id:'i38', t:'Guardar preset e fazer backup', n:'Pen/nuvem se possível'},
   ],
 };
+
+// Migrate nested checklist {phase:[{sid,items:[]}]} → flat {phase:[{id,t}]}
+function migrateChecklist(raw) {
+  const result = {};
+  for (const phase of Object.keys(raw)) {
+    const val = raw[phase];
+    if (!Array.isArray(val)) { result[phase] = val; continue; }
+    // Detect nested: first element has 'items' array
+    if (val.length > 0 && Array.isArray(val[0]?.items)) {
+      result[phase] = val.flatMap(sec => sec.items || []);
+    } else {
+      result[phase] = val;
+    }
+  }
+  return result;
+}
 
 const PHASES = [
   {id:'montagem',    label:'Montagem',          icon:'ti-tool'},
@@ -521,7 +515,7 @@ function fmtTime(ts) {
   return d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
 }
 function phaseTotal(phId) {
-  return (cfg.checklist[phId]||[]).reduce((a,s)=>a+s.items.length,0);
+  return (cfg.checklist[phId]||[]).length;
 }
 function phaseDone(svc, phId) {
   return (svc.checks||[]).filter(c=>c.phase===phId).length;
@@ -549,6 +543,9 @@ async function initApp() {
   } else {
     cfg = cfgSnap.data();
     if (!cfg.allowedEmails) cfg.allowedEmails = [];
+    // Migrate nested → flat if needed
+    cfg.checklist = migrateChecklist(cfg.checklist);
+    await saveCfg();
   }
   const svcSnap = await getDocs(collection(db, 'services'));
   services = svcSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -877,7 +874,7 @@ function renderChecklist() {
   const svc = activeService;
   const member = memberById(session.memberId);
   const ph = PHASES.find(p=>p.id===session.phase);
-  const sections = cfg.checklist[session.phase] || [];
+  const items = cfg.checklist[session.phase] || [];
   const done = phaseDone(svc, session.phase);
   const tot = phaseTotal(session.phase);
   const pct = Math.round(done/tot*100);
@@ -894,26 +891,22 @@ function renderChecklist() {
     <div style="padding:4px 20px 8px">
       <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
     </div>
-    <div style="padding:0 20px 20px">`;
-
-  sections.forEach(sec => {
-    h += `<div class="section-header"><i class="ti ${sec.icon}"></i>${sec.label}</div>
+    <div style="padding:0 20px 20px">
       <div class="card card-flush" style="padding:0 18px">`;
-    sec.items.forEach(item => {
-      const checked = itemCheckedBy(svc, item.id);
-      h += `<div class="check-item${checked?' done':''}" onclick="toggleItem('${item.id}')">
-        <div class="checkmark"><i class="ti ti-check"></i></div>
-        <div>
-          <div class="item-label">${item.t}</div>
-          ${item.n ? `<div class="item-note">${item.n}</div>` : ''}
-          ${checked ? `<div class="item-by"><i class="ti ti-user" style="font-size:10px"></i>${checked.member?.name||'?'} · ${fmtTime(checked.ts)}</div>` : ''}
-        </div>
-      </div>`;
-    });
-    h += `</div>`;
+
+  items.forEach(item => {
+    const checked = itemCheckedBy(svc, item.id);
+    h += `<div class="check-item${checked?' done':''}" onclick="toggleItem('${item.id}')">
+      <div class="checkmark"><i class="ti ti-check"></i></div>
+      <div>
+        <div class="item-label">${item.t}</div>
+        ${item.n ? `<div class="item-note">${item.n}</div>` : ''}
+        ${checked ? `<div class="item-by"><i class="ti ti-user" style="font-size:10px"></i>${checked.member?.name||'?'} · ${fmtTime(checked.ts)}</div>` : ''}
+      </div>
+    </div>`;
   });
 
-  h += `</div>`;
+  h += `</div></div>`;
   $('s-check').innerHTML = h;
   show('s-check');
 }
@@ -979,17 +972,15 @@ function goSummary(svcId) {
     const phTot = phaseTotal(ph.id);
     h += `<div class="section-header"><i class="ti ${ph.icon}"></i>${ph.label} — ${phDone}/${phTot}</div>
       <div class="card card-flush" style="padding:0 18px">`;
-    (cfg.checklist[ph.id]||[]).forEach(sec => {
-      sec.items.forEach(item => {
-        const checked = itemCheckedBy(svc, item.id);
-        h += `<div class="check-item${checked?' done':''}">
-          <div class="checkmark"><i class="ti ti-check"></i></div>
-          <div>
-            <div class="item-label">${item.t}</div>
-            ${checked ? `<div class="item-by"><i class="ti ti-user" style="font-size:10px"></i>${checked.member?.name||'?'} · ${fmtTime(checked.ts)}</div>` : ''}
-          </div>
-        </div>`;
-      });
+    (cfg.checklist[ph.id]||[]).forEach(item => {
+      const checked = itemCheckedBy(svc, item.id);
+      h += `<div class="check-item${checked?' done':''}">
+        <div class="checkmark"><i class="ti ti-check"></i></div>
+        <div>
+          <div class="item-label">${item.t}</div>
+          ${checked ? `<div class="item-by"><i class="ti ti-user" style="font-size:10px"></i>${checked.member?.name||'?'} · ${fmtTime(checked.ts)}</div>` : ''}
+        </div>
+      </div>`;
     });
     h += `</div>`;
   });
@@ -1105,15 +1096,13 @@ function renderAdmin() {
   PHASES.forEach(ph => {
     h += `<div class="section-header"><i class="ti ${ph.icon}"></i>${ph.label}</div>
     <div class="card" id="admin-items-${ph.id}">`;
-    (cfg.checklist[ph.id]||[]).forEach(sec => {
-      sec.items.forEach(item => {
-        h += `<div class="admin-row" data-id="${item.id}" data-phase="${ph.id}" data-sec="${sec.sid}" data-type="item">
-          <i class="ti ti-grip-vertical drag-handle" aria-hidden="true"></i>
-          <span class="admin-row-text" id="label-${item.id}">${item.t}</span>
-          <button class="edit-btn" onclick="startEditItem('${ph.id}','${sec.sid}','${item.id}')" aria-label="Editar"><i class="ti ti-pencil"></i></button>
-          <button class="del-btn" onclick="deleteItem('${ph.id}','${sec.sid}','${item.id}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
-        </div>`;
-      });
+    (cfg.checklist[ph.id]||[]).forEach(item => {
+      h += `<div class="admin-row" data-id="${item.id}" data-phase="${ph.id}" data-type="item">
+        <i class="ti ti-grip-vertical drag-handle" aria-hidden="true"></i>
+        <span class="admin-row-text" id="label-${item.id}">${item.t}</span>
+        <button class="edit-btn" onclick="startEditItem('${ph.id}','${item.id}')" aria-label="Editar"><i class="ti ti-pencil"></i></button>
+        <button class="del-btn" onclick="deleteItem('${ph.id}','${item.id}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
+      </div>`;
     });
     h += `</div>
     <div class="add-row">
@@ -1179,8 +1168,7 @@ function initDrag() {
     if (dragType === 'member') {
       cfg.members = newOrder.map(id => cfg.members.find(m => m.id === id)).filter(Boolean);
     } else {
-      const sec = cfg.checklist[dragPhase].find(s => s.sid === rows[0]?.dataset.sec);
-      if (sec) sec.items = newOrder.map(id => sec.items.find(i => i.id === id)).filter(Boolean);
+      cfg.checklist[dragPhase] = newOrder.map(id => cfg.checklist[dragPhase].find(i => i.id === id)).filter(Boolean);
     }
     await saveCfg();
     dragEl = null;
@@ -1233,14 +1221,14 @@ async function addItem(phId) {
   const el = $('new-item-'+phId);
   const t = el.value.trim();
   if (!t) return;
-  cfg.checklist[phId][0].items.push({ id:'i_'+Date.now(), t });
+  if (!cfg.checklist[phId]) cfg.checklist[phId] = [];
+  cfg.checklist[phId].push({ id:'i_'+Date.now(), t });
   await saveCfg();
   renderAdmin();
 }
 
-async function deleteItem(phId, secId, itemId) {
-  const sec = cfg.checklist[phId].find(s=>s.sid===secId);
-  if (sec) sec.items = sec.items.filter(i=>i.id!==itemId);
+async function deleteItem(phId, itemId) {
+  cfg.checklist[phId] = (cfg.checklist[phId]||[]).filter(i => i.id !== itemId);
   await saveCfg();
   renderAdmin();
 }
@@ -1304,9 +1292,8 @@ async function saveEditMember(id, nameInput, emailInput) {
   renderAdmin();
 }
 
-function startEditItem(phId, secId, itemId) {
-  const sec = cfg.checklist[phId]?.find(s => s.sid === secId);
-  const item = sec?.items.find(i => i.id === itemId);
+function startEditItem(phId, itemId) {
+  const item = (cfg.checklist[phId]||[]).find(i => i.id === itemId);
   if (!item) return;
   const row = document.querySelector(`.admin-row[data-id="${itemId}"]`);
   if (!row) return;
@@ -1320,18 +1307,17 @@ function startEditItem(phId, secId, itemId) {
   input.select();
   editBtn.innerHTML = '<i class="ti ti-check"></i>';
   editBtn.style.color = 'var(--accent)';
-  editBtn.onclick = () => saveEditItem(phId, secId, itemId, input);
+  editBtn.onclick = () => saveEditItem(phId, itemId, input);
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') saveEditItem(phId, secId, itemId, input);
+    if (e.key === 'Enter') saveEditItem(phId, itemId, input);
     if (e.key === 'Escape') renderAdmin();
   });
 }
 
-async function saveEditItem(phId, secId, itemId, input) {
+async function saveEditItem(phId, itemId, input) {
   const val = input.value.trim();
   if (!val) return;
-  const sec = cfg.checklist[phId]?.find(s => s.sid === secId);
-  const item = sec?.items.find(i => i.id === itemId);
+  const item = (cfg.checklist[phId]||[]).find(i => i.id === itemId);
   if (item) item.t = val;
   await saveCfg();
   renderAdmin();

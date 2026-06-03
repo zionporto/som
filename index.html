@@ -498,7 +498,7 @@ const ADMIN_PASS = '1234';
 let cfg = null;
 let services = [];
 let activeService = null;
-let session = { memberId: null, phase: null, serviceId: null };
+let session = { memberId: null, phase: null, serviceId: null, autoMatched: false };
 let adminAuthed = false;
 let liveUnsub = null;
 let currentUser = null;  // Firebase Auth user
@@ -782,10 +782,12 @@ function goMember() {
 
   // Auto-select if user matches a member
   if (session.memberId) {
+    session.autoMatched = true;
     renderPhase();
     return;
   }
 
+  session.autoMatched = false;
   let h = `
     <div class="topbar">
       <button class="icon-btn" onclick="renderHome()"><i class="ti ti-arrow-left"></i></button>
@@ -808,8 +810,16 @@ function goMember() {
   show('s-member');
 }
 
+// Back from phase when member was manually selected
+function goMemberBack() {
+  session.memberId = null;
+  session.autoMatched = false;
+  goMember();
+}
+
 function selectMember(id) {
   session.memberId = id;
+  session.autoMatched = false;
   renderPhase();
 }
 
@@ -817,9 +827,11 @@ function selectMember(id) {
 function renderPhase() {
   const svc = activeService;
   const member = memberById(session.memberId);
+  // If member was auto-matched, back goes to home; otherwise back to member select
+  const backFn = session.autoMatched ? 'renderHome()' : 'goMemberBack()';
   let h = `
     <div class="topbar">
-      <button class="icon-btn" onclick="goMember()"><i class="ti ti-arrow-left"></i></button>
+      <button class="icon-btn" onclick="${backFn}"><i class="ti ti-arrow-left"></i></button>
       <div>
         <div class="topbar-title">${member.name}</div>
         <div class="topbar-sub">${svc.name}</div>
@@ -1325,7 +1337,7 @@ async function deleteService(id) {
 // ─── EXPOSE TO WINDOW ─────────────────────────────────────────────
 Object.assign(window, {
   renderHome, showNewCulto, createCulto, closeCulto,
-  goMember, selectMember, renderPhase, selectPhase,
+  goMember, goMemberBack, selectMember, renderPhase, selectPhase,
   renderChecklist, toggleItem, goSummary, showHistory,
   goAdminLogin, checkAdminPass, renderAdmin,
   addMember, deleteMember, addItem, deleteItem, changePass,

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Zion Porto - Som</title>
+<title>Zion Porto - SOM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
@@ -278,6 +278,18 @@ body {
   transition: color 0.15s;
 }
 .del-btn:hover { color: var(--red); }
+.edit-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 16px; padding: 4px;
+  transition: color 0.15s;
+}
+.edit-btn:hover { color: var(--accent); }
+.inline-edit {
+  flex: 1; padding: 4px 8px;
+  background: var(--bg); border: 1px solid var(--accent);
+  border-radius: 6px; color: var(--text);
+  font-size: 13px; font-family: var(--font); outline: none;
+}
 .drag-handle {
   color: var(--text3); font-size: 18px; padding: 4px 2px;
   cursor: grab; touch-action: none; flex-shrink: 0;
@@ -379,6 +391,9 @@ import {
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAegG6WVtkpERQ9ApLlk3oH3RoGB6tofKM",
@@ -391,6 +406,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
 // ─── DEFAULT DATA ───────────────────────────────────────────────
 const DEFAULT_MEMBERS = [
@@ -478,12 +495,13 @@ const PHASES = [
 const ADMIN_PASS = '1234';
 
 // ─── STATE ───────────────────────────────────────────────────────
-let cfg = null;        // {members, checklist, adminPass}
-let services = [];     // array of service docs
+let cfg = null;
+let services = [];
 let activeService = null;
 let session = { memberId: null, phase: null, serviceId: null };
 let adminAuthed = false;
 let liveUnsub = null;
+let currentUser = null;  // Firebase Auth user
 
 // ─── HELPERS ─────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -517,8 +535,7 @@ function itemCheckedBy(svc, itemId) {
 }
 
 // ─── FIRESTORE INIT ───────────────────────────────────────────────
-async function initFirestore() {
-  // Config doc
+async function initApp() {
   const cfgRef = doc(db, 'app', 'config');
   const cfgSnap = await getDoc(cfgRef);
   if (!cfgSnap.exists()) {
@@ -526,15 +543,23 @@ async function initFirestore() {
       members: DEFAULT_MEMBERS,
       checklist: DEFAULT_CHECKLIST,
       adminPass: ADMIN_PASS,
+      allowedEmails: [],
     });
-    cfg = { members: DEFAULT_MEMBERS, checklist: DEFAULT_CHECKLIST, adminPass: ADMIN_PASS };
+    cfg = { members: DEFAULT_MEMBERS, checklist: DEFAULT_CHECKLIST, adminPass: ADMIN_PASS, allowedEmails: [] };
   } else {
     cfg = cfgSnap.data();
+    if (!cfg.allowedEmails) cfg.allowedEmails = [];
   }
-  // Services
   const svcSnap = await getDocs(collection(db, 'services'));
   services = svcSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   activeService = services.find(s => s.active) || null;
+
+  // match logged-in user to a member
+  const matched = cfg.members.find(m =>
+    m.email?.toLowerCase() === currentUser.email?.toLowerCase()
+  );
+  if (matched) session.memberId = matched.id;
+
   renderHome();
 }
 
@@ -567,13 +592,16 @@ function renderHome() {
       <div style="flex:1">
         <div class="topbar-title">Zion Porto <span class="sync-dot"></span></div>
       </div>
-      <button class="icon-btn" onclick="goAdminLogin()" aria-label="Admin"><i class="ti ti-settings"></i></button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="icon-btn" onclick="goAdminLogin()" aria-label="Admin" title="Administração"><i class="ti ti-settings"></i></button>
+        <button class="icon-btn" onclick="logOut()" aria-label="Sair" title="Sair"><i class="ti ti-logout"></i></button>
+      </div>
     </div>
     <div style="padding:20px">
     <div class="home-header">
       <div class="logo-mark"><i class="ti ti-music"></i></div>
       <div class="home-title">Equipa de Som</div>
-      <div class="home-sub">Zion Porto</div>
+      <div class="home-sub">${currentUser?.displayName || currentUser?.email || 'Zion Porto'}</div>
     </div>`;
 
   if (svc) {
@@ -751,6 +779,13 @@ function goMember() {
   if (!activeService) return;
   session.serviceId = activeService.id;
   subscribeService(activeService.id);
+
+  // Auto-select if user matches a member
+  if (session.memberId) {
+    renderPhase();
+    return;
+  }
+
   let h = `
     <div class="topbar">
       <button class="icon-btn" onclick="renderHome()"><i class="ti ti-arrow-left"></i></button>
@@ -1029,15 +1064,41 @@ function renderAdmin() {
     h += `<div class="admin-row" data-id="${m.id}" data-type="member">
       <i class="ti ti-grip-vertical drag-handle" aria-hidden="true"></i>
       <div class="av av-${m.av}" style="width:28px;height:28px;font-size:10px">${initials(m.name)}</div>
-      <span class="admin-row-text">${m.name}</span>
+      <div style="flex:1;min-width:0">
+        <span class="admin-row-text" id="label-${m.id}">${m.name}</span>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:1px">${m.email||'sem email'}</div>
+      </div>
+      <button class="edit-btn" onclick="startEditMember('${m.id}')" aria-label="Editar"><i class="ti ti-pencil"></i></button>
       <button class="del-btn" onclick="deleteMember('${m.id}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
     </div>`;
   });
 
   h += `</div>
-  <div class="add-row">
-    <input id="new-member" placeholder="Adicionar membro">
+  <div class="add-row" style="flex-wrap:wrap;gap:6px">
+    <input id="new-member" placeholder="Nome" style="flex:1;min-width:90px">
+    <input id="new-member-email" placeholder="email@gmail.com" style="flex:2;min-width:150px;font-family:var(--mono);font-size:12px">
     <button onclick="addMember()"><i class="ti ti-plus"></i></button>
+  </div>
+
+  <div class="section-header" style="margin-top:8px"><i class="ti ti-shield-lock"></i>Emails autorizados</div>
+  <div class="card" id="admin-emails">`;
+
+  (cfg.allowedEmails||[]).forEach(email => {
+    h += `<div class="admin-row" data-type="email">
+      <i class="ti ti-mail" style="color:var(--text3);font-size:16px"></i>
+      <span class="admin-row-text" style="font-family:var(--mono);font-size:12px">${email}</span>
+      <button class="del-btn" onclick="removeEmail('${email}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
+    </div>`;
+  });
+
+  if (!(cfg.allowedEmails||[]).length) {
+    h += `<div style="font-size:12px;color:var(--text3);padding:10px 0;font-family:var(--mono)">Nenhum email definido — qualquer utilizador Google pode entrar.</div>`;
+  }
+
+  h += `</div>
+  <div class="add-row">
+    <input id="new-email" placeholder="email@gmail.com" style="font-family:var(--mono);font-size:12px">
+    <button onclick="addEmail()"><i class="ti ti-plus"></i></button>
   </div>`;
 
   PHASES.forEach(ph => {
@@ -1047,7 +1108,8 @@ function renderAdmin() {
       sec.items.forEach(item => {
         h += `<div class="admin-row" data-id="${item.id}" data-phase="${ph.id}" data-sec="${sec.sid}" data-type="item">
           <i class="ti ti-grip-vertical drag-handle" aria-hidden="true"></i>
-          <span class="admin-row-text">${item.t}</span>
+          <span class="admin-row-text" id="label-${item.id}">${item.t}</span>
+          <button class="edit-btn" onclick="startEditItem('${ph.id}','${sec.sid}','${item.id}')" aria-label="Editar"><i class="ti ti-pencil"></i></button>
           <button class="del-btn" onclick="deleteItem('${ph.id}','${sec.sid}','${item.id}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
         </div>`;
       });
@@ -1152,9 +1214,26 @@ function initDrag() {
 
 async function addMember() {
   const name = $('new-member').value.trim();
+  const email = $('new-member-email').value.trim().toLowerCase();
   if (!name) return;
   const av = cfg.members.length % 4;
-  cfg.members.push({ id:'m_'+Date.now(), name, av });
+  cfg.members.push({ id:'m_'+Date.now(), name, av, email: email||'' });
+  await saveCfg();
+  renderAdmin();
+}
+
+async function addEmail() {
+  const email = $('new-email').value.trim().toLowerCase();
+  if (!email || !email.includes('@')) return;
+  if (!cfg.allowedEmails) cfg.allowedEmails = [];
+  if (cfg.allowedEmails.includes(email)) return;
+  cfg.allowedEmails.push(email);
+  await saveCfg();
+  renderAdmin();
+}
+
+async function removeEmail(email) {
+  cfg.allowedEmails = (cfg.allowedEmails||[]).filter(e => e !== email);
   await saveCfg();
   renderAdmin();
 }
@@ -1189,6 +1268,71 @@ async function changePass() {
   $('pass-ok').style.display='block';
 }
 
+// ─── INLINE EDIT ─────────────────────────────────────────────────
+function startEditMember(id) {
+  const member = cfg.members.find(m => m.id === id);
+  if (!member) return;
+  const row = document.querySelector(`.admin-row[data-id="${id}"]`);
+  if (!row) return;
+  const label = row.querySelector(`#label-${id}`);
+  const editBtn = row.querySelector('.edit-btn');
+  const input = document.createElement('input');
+  input.className = 'inline-edit';
+  input.value = member.name;
+  label.replaceWith(input);
+  input.focus();
+  input.select();
+  editBtn.innerHTML = '<i class="ti ti-check"></i>';
+  editBtn.style.color = 'var(--accent)';
+  editBtn.onclick = () => saveEditMember(id, input);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveEditMember(id, input);
+    if (e.key === 'Escape') renderAdmin();
+  });
+}
+
+async function saveEditMember(id, input) {
+  const val = input.value.trim();
+  if (!val) return;
+  const member = cfg.members.find(m => m.id === id);
+  if (member) member.name = val;
+  await saveCfg();
+  renderAdmin();
+}
+
+function startEditItem(phId, secId, itemId) {
+  const sec = cfg.checklist[phId]?.find(s => s.sid === secId);
+  const item = sec?.items.find(i => i.id === itemId);
+  if (!item) return;
+  const row = document.querySelector(`.admin-row[data-id="${itemId}"]`);
+  if (!row) return;
+  const label = row.querySelector(`#label-${itemId}`);
+  const editBtn = row.querySelector('.edit-btn');
+  const input = document.createElement('input');
+  input.className = 'inline-edit';
+  input.value = item.t;
+  label.replaceWith(input);
+  input.focus();
+  input.select();
+  editBtn.innerHTML = '<i class="ti ti-check"></i>';
+  editBtn.style.color = 'var(--accent)';
+  editBtn.onclick = () => saveEditItem(phId, secId, itemId, input);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveEditItem(phId, secId, itemId, input);
+    if (e.key === 'Escape') renderAdmin();
+  });
+}
+
+async function saveEditItem(phId, secId, itemId, input) {
+  const val = input.value.trim();
+  if (!val) return;
+  const sec = cfg.checklist[phId]?.find(s => s.sid === secId);
+  const item = sec?.items.find(i => i.id === itemId);
+  if (item) item.t = val;
+  await saveCfg();
+  renderAdmin();
+}
+
 async function deleteService(id) {
   if (!confirm('Apagar este culto permanentemente?')) return;
   await deleteDoc(doc(db, 'services', id));
@@ -1204,14 +1348,86 @@ Object.assign(window, {
   goAdminLogin, checkAdminPass, renderAdmin,
   addMember, deleteMember, addItem, deleteItem, changePass,
   selectType, updatePreview, deleteService,
+  startEditMember, saveEditMember, startEditItem, saveEditItem,
+  addEmail, removeEmail, loginWithGoogle, logOut,
 });
 
+// ─── AUTH SCREENS ─────────────────────────────────────────────────
+function renderLogin() {
+  $('s-loading').innerHTML = `
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center">
+      <div class="logo-mark" style="margin-bottom:20px"><i class="ti ti-music"></i></div>
+      <div style="font-size:20px;font-weight:600;margin-bottom:6px">Equipa de Som</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:40px">Zion Porto</div>
+      <button onclick="loginWithGoogle()" style="
+        display:flex;align-items:center;gap:10px;padding:13px 20px;
+        background:white;color:#1f1f1f;border:none;border-radius:var(--radius-sm);
+        font-size:14px;font-weight:500;font-family:var(--font);cursor:pointer;
+        box-shadow:0 2px 8px rgba(0,0,0,0.3)">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-7.6 20-21 0-1.3-.2-2.7-.5-4z"/><path fill="#34A853" d="M6.3 14.7l7 5.1C15.2 16 19.3 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3c-7.7 0-14.4 4.4-17.7 11.7z"/><path fill="#FBBC05" d="M24 45c5.8 0 11-2 14.7-5.4l-6.8-5.6C29.8 35.9 27 37 24 37c-6 0-10.6-3.8-12.4-8.9l-7 5.4C8.1 40.9 15.5 45 24 45z"/><path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.8 2.5-2.5 4.6-4.7 6l6.8 5.6C41.8 36.4 45 30.7 45 24c0-1.3-.2-2.7-.5-4z"/></svg>
+        Entrar com Google
+      </button>
+      <div id="login-err" style="display:none;margin-top:16px;font-size:12px;color:var(--red);max-width:260px"></div>
+    </div>`;
+  show('s-loading');
+}
+
+function renderDenied(email) {
+  $('s-loading').innerHTML = `
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center">
+      <i class="ti ti-lock" style="font-size:36px;color:var(--red);margin-bottom:16px"></i>
+      <div style="font-size:16px;font-weight:500;margin-bottom:8px">Acesso não autorizado</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:6px">${email}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:32px">Contacta o administrador da equipa.</div>
+      <button onclick="logOut()" class="btn" style="width:auto;padding:10px 20px">
+        <i class="ti ti-logout"></i>Sair
+      </button>
+    </div>`;
+  show('s-loading');
+}
+
+async function loginWithGoogle() {
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch(e) {
+    const el = $('login-err');
+    if (el) { el.style.display='block'; el.textContent = 'Erro ao autenticar. Tenta novamente.'; }
+  }
+}
+
+async function logOut() {
+  adminAuthed = false;
+  currentUser = null;
+  await signOut(auth);
+}
+
 // ─── BOOT ─────────────────────────────────────────────────────────
-initFirestore().catch(err => {
-  $('s-loading').innerHTML = `<div class="loading" style="min-height:100vh">
-    <i class="ti ti-wifi-off" style="font-size:32px;color:var(--red)"></i>
-    <span style="color:var(--text2);font-size:13px">Erro ao ligar ao Firebase.<br>Verifica as credenciais.</span>
-  </div>`;
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    renderLogin();
+    return;
+  }
+  currentUser = user;
+
+  // Load config first to check allowedEmails
+  try {
+    const cfgRef = doc(db, 'app', 'config');
+    const cfgSnap = await getDoc(cfgRef);
+    const allowedEmails = cfgSnap.exists() ? (cfgSnap.data().allowedEmails || []) : [];
+
+    // If no emails configured yet, allow all (first-time setup)
+    if (allowedEmails.length > 0 && !allowedEmails.map(e=>e.toLowerCase()).includes(user.email.toLowerCase())) {
+      renderDenied(user.email);
+      return;
+    }
+
+    await initApp();
+  } catch(e) {
+    $('s-loading').innerHTML = `<div class="loading" style="min-height:100vh">
+      <i class="ti ti-wifi-off" style="font-size:32px;color:var(--red)"></i>
+      <span style="color:var(--text2);font-size:13px">Erro ao ligar ao Firebase.</span>
+    </div>`;
+  }
 });
 </script>
 </body>

@@ -405,6 +405,36 @@ input[type="date"], input[type="time"] {
 <div id="s-admin-login" class="screen"></div>
 <div id="s-admin" class="screen"></div>
 
+<!-- CLOSE CONFIRMATION MODAL -->
+<div id="close-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;width:100%;max-width:340px">
+    <div style="font-size:16px;font-weight:500;margin-bottom:6px">Fechar culto</div>
+    <div id="close-modal-name" style="font-size:13px;color:var(--text2);margin-bottom:16px"></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:20px">Tens a certeza? O culto passa para o histórico.</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1;margin-bottom:0" onclick="cancelClose()">Cancelar</button>
+      <button class="btn btn-danger" style="flex:1;margin-bottom:0" onclick="executeClose()"><i class="ti ti-lock" style="pointer-events:none"></i>Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- REACTIVATE MODAL -->
+<div id="reactivate-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;width:100%;max-width:340px">
+    <div style="font-size:16px;font-weight:500;margin-bottom:6px">Reativar culto</div>
+    <div id="reactivate-modal-name" style="font-size:13px;color:var(--text2);margin-bottom:16px"></div>
+    <div class="field">
+      <label>Password de admin para confirmar</label>
+      <input type="password" id="reactivate-pass" placeholder="••••" style="width:100%;padding:13px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:var(--font);outline:none" onkeydown="if(event.key==='Enter')executeReactivate();if(event.key==='Escape')cancelReactivate()">
+    </div>
+    <div id="reactivate-err" class="err" style="margin-bottom:10px">Password incorreta.</div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn" style="flex:1;margin-bottom:0" onclick="cancelReactivate()">Cancelar</button>
+      <button class="btn btn-accent" style="flex:1;margin-bottom:0" onclick="executeReactivate()"><i class="ti ti-rotate" style="pointer-events:none"></i>Reativar</button>
+    </div>
+  </div>
+</div>
+
 <!-- DELETE MODAL -->
 <div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;width:100%;max-width:340px">
@@ -807,13 +837,30 @@ async function createCulto() {
   renderHome();
 }
 
-async function closeCulto(id) {
+function closeCulto(id) {
+  const svc = services.find(s => s.id === id);
+  if (!svc) return;
+  pendingCloseId = id;
+  $('close-modal-name').textContent = svc.name;
+  $('close-modal').style.display = 'flex';
+}
+
+async function executeClose() {
+  const id = pendingCloseId;
+  if (!id) return;
+  pendingCloseId = null;
+  $('close-modal').style.display = 'none';
   await updateDoc(doc(db, 'services', id), { active: false, closedAt: serverTimestamp() });
   const idx = services.findIndex(s => s.id === id);
   if (idx >= 0) services[idx].active = false;
   if (activeService?.id === id) activeService = services.find(s => s.active) || null;
   if (liveUnsub && !services.some(s => s.active)) { liveUnsub(); liveUnsub = null; }
   renderHome();
+}
+
+function cancelClose() {
+  pendingCloseId = null;
+  $('close-modal').style.display = 'none';
 }
 
 // ─── MEMBER SELECT ────────────────────────────────────────────────
@@ -1059,9 +1106,10 @@ function showHistory() {
             ${evType ? `<i class="ti ${evType.icon}" style="font-size:15px;color:var(--text2)"></i>` : ''}
             <div class="hist-name">${svc.name}</div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:4px">
             <span class="badge badge-done">${pct}%</span>
-            ${adminAuthed ? `<button class="del-btn" onclick="event.stopPropagation();confirmDeleteService('${svc.id}','history')" aria-label="Apagar"><i class="ti ti-trash"></i></button>` : `<button class="del-btn" onclick="event.stopPropagation();confirmDeleteService('${svc.id}','history')" aria-label="Apagar"><i class="ti ti-trash"></i></button>`}
+            <button class="icon-btn" style="width:36px;height:36px;font-size:15px;color:#64a0ff;border-color:rgba(100,160,255,0.2)" onclick="event.stopPropagation();confirmReactivate('${svc.id}')" aria-label="Reativar" title="Reativar"><i class="ti ti-rotate" style="pointer-events:none"></i></button>
+            <button class="del-btn" onclick="event.stopPropagation();confirmDeleteService('${svc.id}','history')" aria-label="Apagar"><i class="ti ti-trash"></i></button>
           </div>
         </div>
         <div class="hist-meta" onclick="goSummary('${svc.id}')">${fmtDate(svc.eventDate || svc.createdAt)}</div>
@@ -1362,9 +1410,47 @@ async function saveEditItem(phId, itemId, input) {
   renderAdmin();
 }
 
+// ─── REACTIVATE WITH PASSWORD ─────────────────────────────────────
+function confirmReactivate(id) {
+  const svc = services.find(s => s.id === id);
+  if (!svc) return;
+  pendingReactivateId = id;
+  $('reactivate-modal-name').textContent = svc.name;
+  $('reactivate-pass').value = '';
+  $('reactivate-err').style.display = 'none';
+  $('reactivate-modal').style.display = 'flex';
+  setTimeout(() => $('reactivate-pass').focus(), 100);
+}
+
+function cancelReactivate() {
+  pendingReactivateId = null;
+  $('reactivate-modal').style.display = 'none';
+}
+
+async function executeReactivate() {
+  const pass = $('reactivate-pass').value;
+  if (pass !== cfg.adminPass) {
+    $('reactivate-err').style.display = 'block';
+    $('reactivate-pass').value = '';
+    $('reactivate-pass').focus();
+    return;
+  }
+  $('reactivate-modal').style.display = 'none';
+  const id = pendingReactivateId;
+  pendingReactivateId = null;
+  await updateDoc(doc(db, 'services', id), { active: true, closedAt: null });
+  const idx = services.findIndex(s => s.id === id);
+  if (idx >= 0) services[idx].active = true;
+  activeService = services[idx];
+  subscribeService(id);
+  renderHome();
+}
+
 // ─── DELETE WITH PASSWORD CONFIRMATION ───────────────────────────
 let pendingDeleteId = null;
 let pendingDeleteBack = null;
+let pendingCloseId = null;
+let pendingReactivateId = null;
 
 function confirmDeleteService(id, backTo) {
   const svc = services.find(s => s.id === id);
@@ -1407,13 +1493,14 @@ async function executeDelete() {
 
 // ─── EXPOSE TO WINDOW ─────────────────────────────────────────────
 Object.assign(window, {
-  renderHome, showNewCulto, createCulto, closeCulto,
+  renderHome, showNewCulto, createCulto, closeCulto, executeClose, cancelClose,
   startCheck, goMember, goMemberBack, selectMember, renderPhase, selectPhase,
   renderChecklist, toggleItem, goSummary, showHistory,
   goAdminLogin, checkAdminPass, renderAdmin,
   addMember, deleteMember, addItem, deleteItem, changePass,
   selectType, updatePreview,
   confirmDeleteService, closeDeleteModal, executeDelete,
+  confirmReactivate, cancelReactivate, executeReactivate,
   startEditMember, saveEditMember, startEditItem, saveEditItem,
   loginWithGoogle, logOut,
 });

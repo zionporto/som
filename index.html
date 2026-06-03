@@ -1121,8 +1121,8 @@ function showHistory() {
 // ─── ADMIN LOGIN ──────────────────────────────────────────────────
 function isAdmin() {
   if (!currentUser || !cfg) return false;
-  const adminEmails = (cfg.adminEmails || []).map(e => e.toLowerCase());
-  return adminEmails.includes(currentUser.email.toLowerCase());
+  const member = cfg.members.find(m => m.email?.toLowerCase() === currentUser.email.toLowerCase());
+  return member?.isAdmin === true;
 }
 
 function goAdminLogin() {
@@ -1158,13 +1158,20 @@ function renderAdmin() {
     <div class="card" id="admin-members">`;
 
   cfg.members.forEach(m => {
+    const isSelf = m.email?.toLowerCase() === currentUser?.email?.toLowerCase();
     h += `<div class="admin-row" data-id="${m.id}" data-type="member">
       <i class="ti ti-grip-vertical drag-handle" aria-hidden="true"></i>
       <div class="av av-${m.av}" style="width:28px;height:28px;font-size:10px">${initials(m.name)}</div>
       <div style="flex:1;min-width:0">
-        <span class="admin-row-text" id="label-${m.id}">${m.name}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="admin-row-text" id="label-${m.id}">${m.name}</span>
+          ${m.isAdmin ? `<span style="font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,96,0.2);border-radius:99px;padding:1px 6px;font-family:var(--mono)">admin</span>` : ''}
+        </div>
         <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:1px">${m.email||'sem email'}</div>
       </div>
+      <button class="icon-btn" onclick="toggleAdmin('${m.id}')" aria-label="${m.isAdmin?'Remover admin':'Tornar admin'}" title="${m.isAdmin?'Remover admin':'Tornar admin'}" style="width:36px;height:36px;font-size:15px;${m.isAdmin?'color:var(--accent);border-color:rgba(200,240,96,0.3)':''}${isSelf&&m.isAdmin?';opacity:0.4;pointer-events:none':''}">
+        <i class="ti ti-shield${m.isAdmin?'-check':''}" style="pointer-events:none"></i>
+      </button>
       <button class="edit-btn" onclick="startEditMember('${m.id}')" aria-label="Editar"><i class="ti ti-pencil"></i></button>
       <button class="del-btn" onclick="deleteMember('${m.id}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
     </div>`;
@@ -1173,7 +1180,7 @@ function renderAdmin() {
   h += `</div>
   <div class="add-row" style="flex-wrap:wrap;gap:6px">
     <input id="new-member" placeholder="Nome" style="flex:1;min-width:90px">
-    <input id="new-member-email" placeholder="email@gmail.com" style="flex:2;min-width:150px;font-family:var(--mono);font-size:12px">
+    <input id="new-member-email" placeholder="email@gmail.com" style="flex:2;min-width:150px;font-family:var(--mono);font-size:14px">
     <button onclick="addMember()"><i class="ti ti-plus"></i></button>
   </div>`;
 
@@ -1195,29 +1202,7 @@ function renderAdmin() {
     </div>`;
   });
 
-  h += `
-    <div class="section-header" style="margin-top:8px"><i class="ti ti-shield-check"></i>Administradores</div>
-    <div class="card" id="admin-admins">`;
-
-  (cfg.adminEmails||[]).forEach(email => {
-    const isSelf = email.toLowerCase() === currentUser?.email?.toLowerCase();
-    h += `<div class="admin-row">
-      <i class="ti ti-shield" style="color:var(--accent);font-size:16px;padding:4px"></i>
-      <span class="admin-row-text" style="font-family:var(--mono);font-size:12px">${email}${isSelf?' (tu)':''}</span>
-      ${!isSelf ? `<button class="del-btn" onclick="removeAdmin('${email}')" aria-label="Remover"><i class="ti ti-trash"></i></button>` : ''}
-    </div>`;
-  });
-
-  if (!(cfg.adminEmails||[]).length) {
-    h += `<div style="font-size:12px;color:var(--text3);padding:10px 0;font-family:var(--mono)">Nenhum administrador definido.</div>`;
-  }
-
-  h += `</div>
-  <div class="add-row">
-    <input id="new-admin-email" placeholder="email@gmail.com" style="font-family:var(--mono);font-size:14px">
-    <button onclick="addAdmin()"><i class="ti ti-plus"></i></button>
-  </div>
-  </div>`;
+  h += `</div>`;
 
   $('s-admin').innerHTML = h;
   show('s-admin');
@@ -1332,21 +1317,22 @@ async function deleteItem(phId, itemId) {
   renderAdmin();
 }
 
-async function addAdmin() {
-  const email = $('new-admin-email').value.trim().toLowerCase();
-  if (!email || !email.includes('@')) return;
-  if (!cfg.adminEmails) cfg.adminEmails = [];
-  if (cfg.adminEmails.includes(email)) return;
-  cfg.adminEmails.push(email);
+async function toggleAdmin(memberId) {
+  const member = cfg.members.find(m => m.id === memberId);
+  if (!member) return;
+  // Prevent removing own admin if you're the only admin
+  const admins = cfg.members.filter(m => m.isAdmin);
+  if (member.isAdmin && admins.length === 1) {
+    alert('Tens de ter pelo menos um administrador.'); return;
+  }
+  member.isAdmin = !member.isAdmin;
   await saveCfg();
+  adminAuthed = isAdmin();
   renderAdmin();
 }
 
-async function removeAdmin(email) {
-  cfg.adminEmails = (cfg.adminEmails||[]).filter(e => e !== email);
-  await saveCfg();
-  renderAdmin();
-}
+async function addAdmin() {} // deprecated
+async function removeAdmin() {} // deprecated
 
 async function changePass() {} // deprecated — kept for compatibility
 
@@ -1506,7 +1492,7 @@ Object.assign(window, {
   renderChecklist, toggleItem, goSummary, showHistory,
   goAdminLogin, checkAdminPass, renderAdmin,
   addMember, deleteMember, addItem, deleteItem, changePass,
-  addAdmin, removeAdmin,
+  addAdmin, removeAdmin, toggleAdmin,
   selectType, updatePreview,
   confirmDeleteService, closeDeleteModal, executeDelete,
   confirmReactivate, cancelReactivate, executeReactivate,

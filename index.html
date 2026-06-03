@@ -423,12 +423,8 @@ input[type="date"], input[type="time"] {
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;width:100%;max-width:340px">
     <div style="font-size:16px;font-weight:500;margin-bottom:6px">Reativar culto</div>
     <div id="reactivate-modal-name" style="font-size:13px;color:var(--text2);margin-bottom:16px"></div>
-    <div class="field">
-      <label>Password de admin para confirmar</label>
-      <input type="password" id="reactivate-pass" placeholder="••••" style="width:100%;padding:13px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:var(--font);outline:none" onkeydown="if(event.key==='Enter')executeReactivate();if(event.key==='Escape')cancelReactivate()">
-    </div>
-    <div id="reactivate-err" class="err" style="margin-bottom:10px">Password incorreta.</div>
-    <div style="display:flex;gap:8px;margin-top:4px">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:20px">O culto volta a aparecer como ativo na home.</div>
+    <div style="display:flex;gap:8px">
       <button class="btn" style="flex:1;margin-bottom:0" onclick="cancelReactivate()">Cancelar</button>
       <button class="btn btn-accent" style="flex:1;margin-bottom:0" onclick="executeReactivate()"><i class="ti ti-rotate" style="pointer-events:none"></i>Reativar</button>
     </div>
@@ -440,14 +436,11 @@ input[type="date"], input[type="time"] {
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;width:100%;max-width:340px">
     <div style="font-size:16px;font-weight:500;margin-bottom:6px">Apagar culto</div>
     <div id="delete-modal-name" style="font-size:13px;color:var(--text2);margin-bottom:16px"></div>
-    <div class="field">
-      <label>Password de admin para confirmar</label>
-      <input type="password" id="delete-pass" placeholder="••••" style="width:100%;padding:13px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:16px;font-family:var(--font);outline:none" onkeydown="if(event.key==='Enter')executeDelete();if(event.key==='Escape')closeDeleteModal()">
-    </div>
-    <div id="delete-err" class="err" style="margin-bottom:10px">Password incorreta.</div>
-    <div style="display:flex;gap:8px;margin-top:4px">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:20px">Esta ação é permanente e não pode ser desfeita.</div>
+    <div id="delete-err" class="err" style="margin-bottom:10px">Não tens permissão.</div>
+    <div style="display:flex;gap:8px">
       <button class="btn" style="flex:1;margin-bottom:0" onclick="closeDeleteModal()">Cancelar</button>
-      <button class="btn btn-danger" style="flex:1;margin-bottom:0" onclick="executeDelete()"><i class="ti ti-trash"></i>Apagar</button>
+      <button class="btn btn-danger" style="flex:1;margin-bottom:0" onclick="executeDelete()"><i class="ti ti-trash" style="pointer-events:none"></i>Apagar</button>
     </div>
   </div>
 </div>
@@ -460,7 +453,7 @@ import {
   collection, getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged, getRedirectResult
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -611,10 +604,13 @@ async function initApp() {
   } else {
     cfg = cfgSnap.data();
     if (!cfg.allowedEmails) cfg.allowedEmails = [];
+    if (!cfg.adminEmails) cfg.adminEmails = [];
     // Migrate nested → flat if needed
     cfg.checklist = migrateChecklist(cfg.checklist);
     await saveCfg();
   }
+  // Set admin status based on email
+  adminAuthed = isAdmin();
   const svcSnap = await getDocs(collection(db, 'services'));
   services = svcSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   activeService = services.find(s => s.active) || null;
@@ -1123,31 +1119,32 @@ function showHistory() {
 }
 
 // ─── ADMIN LOGIN ──────────────────────────────────────────────────
+function isAdmin() {
+  if (!currentUser || !cfg) return false;
+  const adminEmails = (cfg.adminEmails || []).map(e => e.toLowerCase());
+  return adminEmails.includes(currentUser.email.toLowerCase());
+}
+
 function goAdminLogin() {
-  if (adminAuthed) { renderAdmin(); return; }
+  if (isAdmin()) { adminAuthed = true; renderAdmin(); return; }
   $('s-admin-login').innerHTML = `
     <div class="topbar">
       <button class="icon-btn" onclick="renderHome()"><i class="ti ti-arrow-left"></i></button>
       <div class="topbar-title">Administração</div>
     </div>
     <div style="padding:20px">
-      <div class="card">
-        <div class="field">
-          <label>Password de admin</label>
-          <input type="password" id="adm-pass" placeholder="••••">
-        </div>
-        <div id="adm-err" class="err">Password incorreta.</div>
+      <div class="card" style="text-align:center;padding:32px 20px">
+        <i class="ti ti-lock" style="font-size:32px;color:var(--text3);display:block;margin-bottom:12px"></i>
+        <div style="font-size:14px;color:var(--text2);margin-bottom:6px">Acesso restrito</div>
+        <div style="font-size:12px;color:var(--text3)">${currentUser?.email}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:8px">Contacta o administrador da equipa.</div>
       </div>
-      <button class="btn btn-accent" onclick="checkAdminPass()"><i class="ti ti-lock-open"></i>Entrar</button>
+      <button class="btn" onclick="renderHome()"><i class="ti ti-arrow-left"></i>Voltar</button>
     </div>`;
   show('s-admin-login');
 }
 
-function checkAdminPass() {
-  const v = $('adm-pass').value;
-  if (v === cfg.adminPass) { adminAuthed = true; renderAdmin(); }
-  else { $('adm-err').style.display='block'; }
-}
+function checkAdminPass() {} // kept for compatibility
 
 // ─── ADMIN ────────────────────────────────────────────────────────
 function renderAdmin() {
@@ -1199,13 +1196,28 @@ function renderAdmin() {
   });
 
   h += `
-    <div class="section-header" style="margin-top:8px"><i class="ti ti-lock"></i>Segurança</div>
-    <div class="card">
-      <div class="field"><label>Nova password</label><input type="password" id="new-pass" placeholder="••••"></div>
-      <button class="btn" onclick="changePass()" style="margin-top:4px"><i class="ti ti-check"></i>Atualizar</button>
-      <div id="pass-ok" class="ok">Password atualizada.</div>
-    </div>
+    <div class="section-header" style="margin-top:8px"><i class="ti ti-shield-check"></i>Administradores</div>
+    <div class="card" id="admin-admins">`;
+
+  (cfg.adminEmails||[]).forEach(email => {
+    const isSelf = email.toLowerCase() === currentUser?.email?.toLowerCase();
+    h += `<div class="admin-row">
+      <i class="ti ti-shield" style="color:var(--accent);font-size:16px;padding:4px"></i>
+      <span class="admin-row-text" style="font-family:var(--mono);font-size:12px">${email}${isSelf?' (tu)':''}</span>
+      ${!isSelf ? `<button class="del-btn" onclick="removeAdmin('${email}')" aria-label="Remover"><i class="ti ti-trash"></i></button>` : ''}
     </div>`;
+  });
+
+  if (!(cfg.adminEmails||[]).length) {
+    h += `<div style="font-size:12px;color:var(--text3);padding:10px 0;font-family:var(--mono)">Nenhum administrador definido.</div>`;
+  }
+
+  h += `</div>
+  <div class="add-row">
+    <input id="new-admin-email" placeholder="email@gmail.com" style="font-family:var(--mono);font-size:14px">
+    <button onclick="addAdmin()"><i class="ti ti-plus"></i></button>
+  </div>
+  </div>`;
 
   $('s-admin').innerHTML = h;
   show('s-admin');
@@ -1320,13 +1332,23 @@ async function deleteItem(phId, itemId) {
   renderAdmin();
 }
 
-async function changePass() {
-  const v = $('new-pass').value;
-  if (!v) return;
-  cfg.adminPass = v;
+async function addAdmin() {
+  const email = $('new-admin-email').value.trim().toLowerCase();
+  if (!email || !email.includes('@')) return;
+  if (!cfg.adminEmails) cfg.adminEmails = [];
+  if (cfg.adminEmails.includes(email)) return;
+  cfg.adminEmails.push(email);
   await saveCfg();
-  $('pass-ok').style.display='block';
+  renderAdmin();
 }
+
+async function removeAdmin(email) {
+  cfg.adminEmails = (cfg.adminEmails||[]).filter(e => e !== email);
+  await saveCfg();
+  renderAdmin();
+}
+
+async function changePass() {} // deprecated — kept for compatibility
 
 // ─── INLINE EDIT ─────────────────────────────────────────────────
 function startEditMember(id) {
@@ -1414,12 +1436,10 @@ async function saveEditItem(phId, itemId, input) {
 function confirmReactivate(id) {
   const svc = services.find(s => s.id === id);
   if (!svc) return;
+  if (!isAdmin()) { alert('Apenas administradores podem reativar cultos.'); return; }
   pendingReactivateId = id;
   $('reactivate-modal-name').textContent = svc.name;
-  $('reactivate-pass').value = '';
-  $('reactivate-err').style.display = 'none';
   $('reactivate-modal').style.display = 'flex';
-  setTimeout(() => $('reactivate-pass').focus(), 100);
 }
 
 function cancelReactivate() {
@@ -1428,13 +1448,7 @@ function cancelReactivate() {
 }
 
 async function executeReactivate() {
-  const pass = $('reactivate-pass').value;
-  if (pass !== cfg.adminPass) {
-    $('reactivate-err').style.display = 'block';
-    $('reactivate-pass').value = '';
-    $('reactivate-pass').focus();
-    return;
-  }
+  if (!isAdmin()) return;
   $('reactivate-modal').style.display = 'none';
   const id = pendingReactivateId;
   pendingReactivateId = null;
@@ -1455,13 +1469,13 @@ let pendingReactivateId = null;
 function confirmDeleteService(id, backTo) {
   const svc = services.find(s => s.id === id);
   if (!svc) return;
+  if (!isAdmin()) { alert('Apenas administradores podem apagar cultos.'); return; }
   pendingDeleteId = id;
   pendingDeleteBack = backTo;
   $('delete-modal-name').textContent = svc.name;
   $('delete-pass').value = '';
   $('delete-err').style.display = 'none';
-  const modal = $('delete-modal');
-  modal.style.display = 'flex';
+  $('delete-modal').style.display = 'flex';
   setTimeout(() => $('delete-pass').focus(), 100);
 }
 
@@ -1472,13 +1486,7 @@ function closeDeleteModal() {
 }
 
 async function executeDelete() {
-  const pass = $('delete-pass').value;
-  if (pass !== cfg.adminPass) {
-    $('delete-err').style.display = 'block';
-    $('delete-pass').value = '';
-    $('delete-pass').focus();
-    return;
-  }
+  if (!isAdmin()) { $('delete-err').style.display='block'; return; }
   $('delete-modal').style.display = 'none';
   const id = pendingDeleteId;
   const backTo = pendingDeleteBack;
@@ -1498,6 +1506,7 @@ Object.assign(window, {
   renderChecklist, toggleItem, goSummary, showHistory,
   goAdminLogin, checkAdminPass, renderAdmin,
   addMember, deleteMember, addItem, deleteItem, changePass,
+  addAdmin, removeAdmin,
   selectType, updatePreview,
   confirmDeleteService, closeDeleteModal, executeDelete,
   confirmReactivate, cancelReactivate, executeReactivate,
@@ -1540,16 +1549,14 @@ function renderDenied(email) {
 }
 
 async function loginWithGoogle() {
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   try {
-    if (isMobile) {
-      await signInWithRedirect(auth, googleProvider);
-    } else {
-      await signInWithPopup(auth, googleProvider);
-    }
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
+    await signInWithPopup(auth, googleProvider);
   } catch(e) {
-    const el = $('login-err');
-    if (el) { el.style.display='block'; el.textContent = 'Erro ao autenticar. Tenta novamente.'; }
+    if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+      const el = $('login-err');
+      if (el) { el.style.display='block'; el.textContent = 'Erro ao autenticar. Tenta novamente.'; }
+    }
   }
 }
 
@@ -1581,12 +1588,7 @@ async function handleAuth(user) {
   }
 }
 
-// ─── BOOT ─────────────────────────────────────────────────────────
-// Wait for redirect result before subscribing to auth state
-// This prevents the loop on mobile where onAuthStateChanged fires null during redirect
-getRedirectResult(auth).catch(() => {}).finally(() => {
-  onAuthStateChanged(auth, user => handleAuth(user));
-});
+onAuthStateChanged(auth, user => handleAuth(user));
 </script>
 </body>
 </html>

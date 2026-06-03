@@ -392,7 +392,7 @@ import {
   collection, getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  getAuth, GoogleAuthProvider, signInWithRedirect, signOut, onAuthStateChanged, getRedirectResult
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -1078,27 +1078,6 @@ function renderAdmin() {
     <input id="new-member" placeholder="Nome" style="flex:1;min-width:90px">
     <input id="new-member-email" placeholder="email@gmail.com" style="flex:2;min-width:150px;font-family:var(--mono);font-size:12px">
     <button onclick="addMember()"><i class="ti ti-plus"></i></button>
-  </div>
-
-  <div class="section-header" style="margin-top:8px"><i class="ti ti-shield-lock"></i>Emails autorizados</div>
-  <div class="card" id="admin-emails">`;
-
-  (cfg.allowedEmails||[]).forEach(email => {
-    h += `<div class="admin-row" data-type="email">
-      <i class="ti ti-mail" style="color:var(--text3);font-size:16px"></i>
-      <span class="admin-row-text" style="font-family:var(--mono);font-size:12px">${email}</span>
-      <button class="del-btn" onclick="removeEmail('${email}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
-    </div>`;
-  });
-
-  if (!(cfg.allowedEmails||[]).length) {
-    h += `<div style="font-size:12px;color:var(--text3);padding:10px 0;font-family:var(--mono)">Nenhum email definido — qualquer utilizador Google pode entrar.</div>`;
-  }
-
-  h += `</div>
-  <div class="add-row">
-    <input id="new-email" placeholder="email@gmail.com" style="font-family:var(--mono);font-size:12px">
-    <button onclick="addEmail()"><i class="ti ti-plus"></i></button>
   </div>`;
 
   PHASES.forEach(ph => {
@@ -1222,22 +1201,6 @@ async function addMember() {
   renderAdmin();
 }
 
-async function addEmail() {
-  const email = $('new-email').value.trim().toLowerCase();
-  if (!email || !email.includes('@')) return;
-  if (!cfg.allowedEmails) cfg.allowedEmails = [];
-  if (cfg.allowedEmails.includes(email)) return;
-  cfg.allowedEmails.push(email);
-  await saveCfg();
-  renderAdmin();
-}
-
-async function removeEmail(email) {
-  cfg.allowedEmails = (cfg.allowedEmails||[]).filter(e => e !== email);
-  await saveCfg();
-  renderAdmin();
-}
-
 async function deleteMember(id) {
   cfg.members = cfg.members.filter(m=>m.id!==id);
   await saveCfg();
@@ -1276,26 +1239,45 @@ function startEditMember(id) {
   if (!row) return;
   const label = row.querySelector(`#label-${id}`);
   const editBtn = row.querySelector('.edit-btn');
-  const input = document.createElement('input');
-  input.className = 'inline-edit';
-  input.value = member.name;
-  label.replaceWith(input);
-  input.focus();
-  input.select();
+
+  // Replace label area with two inputs: name + email
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:4px';
+  const nameInput = document.createElement('input');
+  nameInput.className = 'inline-edit';
+  nameInput.value = member.name;
+  nameInput.placeholder = 'Nome';
+  const emailInput = document.createElement('input');
+  emailInput.className = 'inline-edit';
+  emailInput.style.fontSize = '11px';
+  emailInput.value = member.email || '';
+  emailInput.placeholder = 'email@gmail.com';
+  wrap.appendChild(nameInput);
+  wrap.appendChild(emailInput);
+
+  // Replace the whole info div (label + email subtitle)
+  const infoDiv = label.closest('div') || label.parentNode;
+  infoDiv.replaceWith(wrap);
+
+  nameInput.focus();
+  nameInput.select();
   editBtn.innerHTML = '<i class="ti ti-check"></i>';
   editBtn.style.color = 'var(--accent)';
-  editBtn.onclick = () => saveEditMember(id, input);
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') saveEditMember(id, input);
+  editBtn.onclick = () => saveEditMember(id, nameInput, emailInput);
+  const onKey = e => {
+    if (e.key === 'Enter') saveEditMember(id, nameInput, emailInput);
     if (e.key === 'Escape') renderAdmin();
-  });
+  };
+  nameInput.addEventListener('keydown', onKey);
+  emailInput.addEventListener('keydown', onKey);
 }
 
-async function saveEditMember(id, input) {
-  const val = input.value.trim();
-  if (!val) return;
+async function saveEditMember(id, nameInput, emailInput) {
+  const name = nameInput.value.trim();
+  const email = emailInput.value.trim().toLowerCase();
+  if (!name) return;
   const member = cfg.members.find(m => m.id === id);
-  if (member) member.name = val;
+  if (member) { member.name = name; member.email = email; }
   await saveCfg();
   renderAdmin();
 }
@@ -1349,7 +1331,7 @@ Object.assign(window, {
   addMember, deleteMember, addItem, deleteItem, changePass,
   selectType, updatePreview, deleteService,
   startEditMember, saveEditMember, startEditItem, saveEditItem,
-  addEmail, removeEmail, loginWithGoogle, logOut,
+  loginWithGoogle, logOut,
 });
 
 // ─── AUTH SCREENS ─────────────────────────────────────────────────
@@ -1388,7 +1370,7 @@ function renderDenied(email) {
 
 async function loginWithGoogle() {
   try {
-    await signInWithPopup(auth, googleProvider);
+    await signInWithRedirect(auth, googleProvider);
   } catch(e) {
     const el = $('login-err');
     if (el) { el.style.display='block'; el.textContent = 'Erro ao autenticar. Tenta novamente.'; }
@@ -1404,19 +1386,25 @@ async function logOut() {
 // ─── BOOT ─────────────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
   if (!user) {
-    renderLogin();
+    // Check if we're returning from a redirect
+    try {
+      const result = await getRedirectResult(auth);
+      if (!result) renderLogin();
+    } catch(e) {
+      renderLogin();
+    }
     return;
   }
   currentUser = user;
 
-  // Load config first to check allowedEmails
   try {
     const cfgRef = doc(db, 'app', 'config');
     const cfgSnap = await getDoc(cfgRef);
-    const allowedEmails = cfgSnap.exists() ? (cfgSnap.data().allowedEmails || []) : [];
+    // Check access: use member emails as the allowed list
+    const memberEmails = (cfgSnap.exists() ? (cfgSnap.data().members || []) : [])
+      .map(m => m.email?.toLowerCase()).filter(Boolean);
 
-    // If no emails configured yet, allow all (first-time setup)
-    if (allowedEmails.length > 0 && !allowedEmails.map(e=>e.toLowerCase()).includes(user.email.toLowerCase())) {
+    if (memberEmails.length > 0 && !memberEmails.includes(user.email.toLowerCase())) {
       renderDenied(user.email);
       return;
     }

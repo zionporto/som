@@ -615,11 +615,19 @@ async function initApp() {
   services = svcSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   activeService = services.find(s => s.active) || null;
 
-  // match logged-in user to a member
+  // Match logged-in user to a member and sync name from Google
   const matched = cfg.members.find(m =>
     m.email?.toLowerCase() === currentUser.email?.toLowerCase()
   );
-  if (matched) session.memberId = matched.id;
+  if (matched) {
+    session.memberId = matched.id;
+    // Sync name from Google Auth if available and different
+    const googleName = currentUser.displayName;
+    if (googleName && googleName !== matched.name) {
+      matched.name = googleName;
+      await saveCfg();
+    }
+  }
 
   renderHome();
 }
@@ -1159,21 +1167,27 @@ function renderAdmin() {
 
   cfg.members.forEach(m => {
     const isSelf = m.email?.toLowerCase() === currentUser?.email?.toLowerCase();
-    h += `<div class="admin-row" data-id="${m.id}" data-type="member">
+    const shieldStyle = m.isAdmin
+      ? 'color:var(--accent);border-color:rgba(200,240,96,0.3);background:var(--accent-dim)'
+      : 'color:var(--text3)';
+    const canToggle = !(isSelf && m.isAdmin);
+    h += `<div class="admin-row" data-id="${m.id}" data-type="member" style="align-items:center;padding:12px 0">
       <i class="ti ti-grip-vertical drag-handle" aria-hidden="true"></i>
-      <div class="av av-${m.av}" style="width:28px;height:28px;font-size:10px">${initials(m.name)}</div>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span class="admin-row-text" id="label-${m.id}">${m.name}</span>
-          ${m.isAdmin ? `<span style="font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,96,0.2);border-radius:99px;padding:1px 6px;font-family:var(--mono)">admin</span>` : ''}
+      <div class="av av-${m.av}" style="width:36px;height:36px;font-size:11px;flex-shrink:0">${initials(m.name)}</div>
+      <div style="flex:1;min-width:0;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span class="admin-row-text" id="label-${m.id}" style="font-size:14px;font-weight:500">${m.name}</span>
+          ${m.isAdmin ? `<span style="font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,96,0.2);border-radius:99px;padding:2px 7px;font-family:var(--mono);flex-shrink:0">admin</span>` : ''}
         </div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:1px">${m.email||'sem email'}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.email||'sem email'}</div>
       </div>
-      <button class="icon-btn" onclick="toggleAdmin('${m.id}')" aria-label="${m.isAdmin?'Remover admin':'Tornar admin'}" title="${m.isAdmin?'Remover admin':'Tornar admin'}" style="width:36px;height:36px;font-size:15px;${m.isAdmin?'color:var(--accent);border-color:rgba(200,240,96,0.3)':''}${isSelf&&m.isAdmin?';opacity:0.4;pointer-events:none':''}">
-        <i class="ti ti-shield${m.isAdmin?'-check':''}" style="pointer-events:none"></i>
-      </button>
-      <button class="edit-btn" onclick="startEditMember('${m.id}')" aria-label="Editar"><i class="ti ti-pencil"></i></button>
-      <button class="del-btn" onclick="deleteMember('${m.id}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
+      <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+        <button class="icon-btn" onclick="${canToggle ? `toggleAdmin('${m.id}')` : ''}" aria-label="${m.isAdmin?'Remover admin':'Tornar admin'}" style="width:36px;height:36px;font-size:15px;${shieldStyle};${!canToggle?'opacity:0.35;pointer-events:none':''}">
+          <i class="ti ti-shield${m.isAdmin?'-check':''}" style="pointer-events:none"></i>
+        </button>
+        <button class="edit-btn" onclick="startEditMember('${m.id}')" aria-label="Editar"><i class="ti ti-pencil"></i></button>
+        <button class="del-btn" onclick="deleteMember('${m.id}')" aria-label="Remover"><i class="ti ti-trash"></i></button>
+      </div>
     </div>`;
   });
 
